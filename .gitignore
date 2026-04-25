@@ -33,6 +33,12 @@ desktop.ini
 # Notes with secrets
 note.txt
 
+# Claude Code local settings
+.claude/
+
+# Screenshots / temp files
+pic error/
+
 # TypeScript
 *.tsbuildinfo
 
