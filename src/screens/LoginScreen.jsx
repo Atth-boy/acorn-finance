@@ -1,10 +1,71 @@
-import { signInWithPopup } from 'firebase/auth'
-import { auth, googleProvider } from '../lib/firebase'
+import { useState } from 'react'
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
+} from 'firebase/auth'
+import { auth } from '../lib/firebase'
 import { CC, DISPLAY, FONT, PAPER } from '../tokens'
 import { Squirrel } from '../components/Squirrel'
 
+const toEmail = (username) => `${username.trim().toLowerCase()}@acorn.app`
+
+const ERROR_MAP = {
+  'auth/user-not-found':      'ไม่พบชื่อผู้ใช้นี้',
+  'auth/wrong-password':      'รหัสผ่านไม่ถูกต้อง',
+  'auth/invalid-credential':  'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
+  'auth/email-already-in-use':'ชื่อผู้ใช้นี้ถูกใช้ไปแล้ว',
+  'auth/weak-password':       'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร',
+  'auth/too-many-requests':   'พยายามหลายครั้งเกินไป กรุณารอสักครู่',
+}
+
 export function LoginScreen() {
-  const login = () => signInWithPopup(auth, googleProvider)
+  const [mode,     setMode]     = useState('login')   // 'login' | 'register'
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirm,  setConfirm]  = useState('')
+  const [error,    setError]    = useState('')
+  const [loading,  setLoading]  = useState(false)
+
+  const clearError = () => setError('')
+
+  const validate = () => {
+    if (!username.trim())                          return 'กรุณากรอกชื่อผู้ใช้'
+    if (!/^[a-zA-Z0-9._-]{3,20}$/.test(username)) return 'ชื่อผู้ใช้ใช้ได้แค่ a-z 0-9 . _ - (3–20 ตัว)'
+    if (!password)                                 return 'กรุณากรอกรหัสผ่าน'
+    if (mode === 'register' && password !== confirm) return 'รหัสผ่านไม่ตรงกัน'
+    return null
+  }
+
+  const submit = async () => {
+    const err = validate()
+    if (err) { setError(err); return }
+    setLoading(true); setError('')
+    try {
+      const email = toEmail(username)
+      if (mode === 'login') {
+        await signInWithEmailAndPassword(auth, email, password)
+      } else {
+        const cred = await createUserWithEmailAndPassword(auth, email, password)
+        await updateProfile(cred.user, { displayName: username.trim() })
+      }
+    } catch (e) {
+      setError(ERROR_MAP[e.code] || 'เกิดข้อผิดพลาด กรุณาลองใหม่')
+      setLoading(false)
+    }
+  }
+
+  const switchMode = () => {
+    setMode(m => m === 'login' ? 'register' : 'login')
+    setError(''); setPassword(''); setConfirm('')
+  }
+
+  const inp = {
+    width: '100%', padding: '13px 16px', borderRadius: 16,
+    border: `1.5px solid ${CC.border}`, background: CC.surface,
+    fontSize: 15, fontFamily: FONT, color: CC.ink,
+    boxSizing: 'border-box', outline: 'none',
+  }
 
   return (
     <div style={{
@@ -13,41 +74,79 @@ export function LoginScreen() {
       fontFamily: FONT, color: CC.ink,
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
-      padding: 32, gap: 0,
+      padding: '24px 32px',
     }}>
-      <Squirrel size={140} mood="happy" />
+      <Squirrel size={110} mood="happy" />
 
-      <div style={{ marginTop: 20, fontSize: 26, fontWeight: 700, fontFamily: DISPLAY, letterSpacing: -0.3, textAlign: 'center' }}>
+      <div style={{ marginTop: 16, fontSize: 24, fontWeight: 700, fontFamily: DISPLAY, letterSpacing: -0.3, textAlign: 'center' }}>
         กระรอกน้อยนักสะสม
       </div>
-      <div style={{ marginTop: 8, fontSize: 14, color: CC.ink2, fontStyle: 'italic', textAlign: 'center' }}>
-        เก็บลูกโอ๊กทุกบาท ทุกสตางค์
+      <div style={{ marginTop: 6, fontSize: 13, color: CC.ink2, fontStyle: 'italic', textAlign: 'center' }}>
+        {mode === 'login' ? 'ยินดีต้อนรับกลับมา' : 'สร้างบัญชีใหม่'}
+      </div>
+
+      <div style={{ width: '100%', maxWidth: 320, marginTop: 28, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <input
+          type="text"
+          placeholder="ชื่อผู้ใช้"
+          value={username}
+          onChange={e => { setUsername(e.target.value); clearError() }}
+          onKeyDown={e => e.key === 'Enter' && submit()}
+          autoCapitalize="none"
+          autoCorrect="off"
+          style={inp}
+        />
+        <input
+          type="password"
+          placeholder="รหัสผ่าน"
+          value={password}
+          onChange={e => { setPassword(e.target.value); clearError() }}
+          onKeyDown={e => e.key === 'Enter' && submit()}
+          style={inp}
+        />
+        {mode === 'register' && (
+          <input
+            type="password"
+            placeholder="ยืนยันรหัสผ่าน"
+            value={confirm}
+            onChange={e => { setConfirm(e.target.value); clearError() }}
+            onKeyDown={e => e.key === 'Enter' && submit()}
+            style={inp}
+          />
+        )}
+
+        {error && (
+          <div style={{ fontSize: 12, color: CC.ember, textAlign: 'center', padding: '4px 0' }}>
+            {error}
+          </div>
+        )}
+
+        <button
+          onClick={submit}
+          disabled={loading}
+          style={{
+            marginTop: 4, width: '100%', height: 52, borderRadius: 18,
+            background: loading ? CC.border : CC.walnut,
+            color: '#fff', border: 'none',
+            fontSize: 15, fontWeight: 700, cursor: loading ? 'default' : 'pointer',
+            fontFamily: FONT, transition: 'background 0.2s',
+            boxShadow: loading ? 'none' : '0 6px 18px rgba(122,79,42,0.35)',
+          }}
+        >
+          {loading ? '⏳ กำลังดำเนินการ...' : mode === 'login' ? '🌰 เข้าสู่ระบบ' : '🐿️ สร้างบัญชี'}
+        </button>
       </div>
 
       <button
-        onClick={login}
+        onClick={switchMode}
         style={{
-          marginTop: 52, width: '100%', maxWidth: 280, height: 52,
-          borderRadius: 18, background: CC.walnut, color: '#fff', border: 'none',
-          fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: FONT,
-          boxShadow: '0 6px 18px rgba(122,79,42,0.35)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          marginTop: 20, background: 'none', border: 'none',
+          color: CC.walnut, fontSize: 13, fontWeight: 600,
+          cursor: 'pointer', fontFamily: FONT,
         }}
       >
-        <GoogleIcon />
-        เข้าสู่ระบบด้วย Google
+        {mode === 'login' ? 'ยังไม่มีบัญชี? สร้างใหม่' : 'มีบัญชีอยู่แล้ว? เข้าสู่ระบบ'}
       </button>
     </div>
-  )
-}
-
-function GoogleIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 48 48">
-      <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.1 29.2 35 24 35c-6.1 0-11-4.9-11-11s4.9-11 11-11c2.8 0 5.3 1 7.2 2.7l5.7-5.7C33.5 7.1 28.9 5 24 5 13.5 5 5 13.5 5 24s8.5 19 19 19 19-8.5 19-19c0-1.3-.1-2.6-.4-3.9z" />
-      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16.1 19 13 24 13c2.8 0 5.3 1 7.2 2.7l5.7-5.7C33.5 7.1 28.9 5 24 5 16.3 5 9.7 9.3 6.3 14.7z" />
-      <path fill="#4CAF50" d="M24 43c4.8 0 9.2-1.9 12.5-4.9l-5.8-4.9C28.9 34.7 26.6 35.5 24 35.5c-5.1 0-9.5-2.8-11.3-6.9l-6.5 5C9.5 39.3 16.3 43 24 43z" />
-      <path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.9 2.4-2.5 4.5-4.5 6l5.8 4.9C42.9 36.4 44 31.5 44 26c0-2-.2-3.9-.4-5.9z" />
-    </svg>
   )
 }
