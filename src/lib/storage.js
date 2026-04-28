@@ -55,6 +55,10 @@ export const storage = {
     await batch.commit()
   },
 
+  async deleteTxn(uid, txnId) {
+    await deleteDoc(doc(db, 'users', uid, 'transactions', txnId))
+  },
+
   async reset(uid) {
     const snap = await getDocs(txnCol(uid))
     const batch = writeBatch(db)

@@ -6,8 +6,11 @@ import { Leaf }     from '../components/Leaf'
 
 const DAY_LABELS = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส']
 
-export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [] }) {
-  const [chartPeriod, setChartPeriod] = useState('week')
+export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [], onDeleteTxn }) {
+  const [chartPeriod,  setChartPeriod]  = useState('week')
+  const [showAll,      setShowAll]      = useState(false)
+  const [selectedTxn,  setSelectedTxn]  = useState(null)
+  const [deleting,     setDeleting]     = useState(false)
 
   const firstName = user?.displayName?.split(' ')[0] || 'คุณ'
   const now        = new Date()
@@ -31,7 +34,8 @@ export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [] }) {
   const totalOut = monthlyTxns.filter(t => t.amt < 0).reduce((s, t) => s + Math.abs(t.amt), 0)
   const defaultWallet = wallets.find(w => w.isDefault)
   const balance  = defaultWallet?.amt ?? 0
-  const recent   = [...todayTxns].reverse().slice(0, 10)
+  const allToday = [...todayTxns].reverse()
+  const recent   = showAll ? allToday : allToday.slice(0, 10)
 
   const todayDay    = now.getDate()
   const billsDueNow = fixedExpenses.filter(fe => fe.cutDay === todayDay)
@@ -205,11 +209,11 @@ export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [] }) {
         </div>
       </div>
 
-      {/* Today's transactions (reset daily) */}
+      {/* Today's transactions */}
       <div style={{ padding: '20px 20px 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ fontSize: 16, fontWeight: 700, fontFamily: DISPLAY }}>วันนี้</div>
-          <div style={{ fontSize: 12, color: CC.walnut }}>{todayTxns.length} รายการ</div>
+          <div style={{ fontSize: 12, color: CC.walnut }}>{allToday.length} รายการ</div>
         </div>
         <div style={{ background: CC.surface, borderRadius: 24, border: `1px solid ${CC.border}` }}>
           {recent.length === 0 ? (
@@ -217,39 +221,74 @@ export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [] }) {
               ยังไม่มีรายการ — กด 🌰 เพื่อเริ่ม
             </div>
           ) : recent.map((t, i) => (
-            <div key={t._id || t.id} style={{
-              display: 'flex', alignItems: 'center', padding: '14px 18px',
-              borderBottom: i < recent.length - 1 ? `1px solid ${CC.border}` : 'none',
-            }}>
-              <div style={{
-                width: 38, height: 38, borderRadius: 19,
-                background: CC.amberSoft,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, marginRight: 12, flexShrink: 0,
+            <button key={t._id || t.id}
+              onClick={() => setSelectedTxn(t)}
+              style={{
+                display: 'flex', alignItems: 'center', padding: '14px 18px', width: '100%',
+                borderBottom: i < recent.length - 1 ? `1px solid ${CC.border}` : 'none',
+                background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: FONT,
               }}>
+              <div style={{ width: 38, height: 38, borderRadius: 19, background: t.amt > 0 ? CC.mossSoft : CC.amberSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, marginRight: 12, flexShrink: 0 }}>
                 {t.ic}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>{t.label}</div>
-                <div style={{ fontSize: 12, color: CC.walnut, marginTop: 2 }}>
-                  {t.cat} · {t.time}
-                  {t.note ? ` · ${t.note}` : ''}
+                <div style={{ fontSize: 14, fontWeight: 600, color: CC.ink }}>{t.label}</div>
+                <div style={{ fontSize: 11, color: CC.walnut, marginTop: 2 }}>
+                  {t.cat} · {t.time}{t.note ? ` · ${t.note}` : ''}
                 </div>
               </div>
-              <div style={{
-                fontSize: 15, fontWeight: 700, fontFamily: DISPLAY,
-                fontVariantNumeric: 'tabular-nums',
-                color: t.amt > 0 ? CC.moss : CC.ink,
-                flexShrink: 0,
-              }}>
+              <div style={{ fontSize: 15, fontWeight: 700, fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', color: t.amt > 0 ? CC.moss : CC.ink, flexShrink: 0 }}>
                 {t.amt > 0 ? '+' : '−'}฿{Math.abs(t.amt).toLocaleString('th-TH')}
               </div>
-            </div>
+            </button>
           ))}
         </div>
+        {allToday.length > 10 && !showAll && (
+          <button onClick={() => setShowAll(true)}
+            style={{ marginTop: 10, width: '100%', padding: '11px', borderRadius: 16, background: 'none', border: `1px solid ${CC.border}`, color: CC.walnut, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>
+            ดูทั้งหมด {allToday.length} รายการ
+          </button>
+        )}
       </div>
 
       <div style={{ height: 40 }} />
+
+      {/* Transaction detail sheet */}
+      {selectedTxn && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: 'rgba(42,31,18,0.55)', display: 'flex', alignItems: 'flex-end' }}
+          onClick={() => setSelectedTxn(null)}>
+          <div style={{ width: '100%', background: CC.bg, borderRadius: '24px 24px 0 0', padding: '24px 20px 40px' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+              <div style={{ width: 52, height: 52, borderRadius: 16, background: selectedTxn.amt > 0 ? CC.mossSoft : CC.amberSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>{selectedTxn.ic}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 17, fontWeight: 700, fontFamily: DISPLAY }}>{selectedTxn.label}</div>
+                <div style={{ fontSize: 12, color: CC.walnut, marginTop: 2 }}>{selectedTxn.cat} · {selectedTxn.time}</div>
+              </div>
+              <div style={{ fontSize: 22, fontWeight: 700, fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', color: selectedTxn.amt > 0 ? CC.moss : CC.ember }}>
+                {selectedTxn.amt > 0 ? '+' : '−'}฿{Math.abs(selectedTxn.amt).toLocaleString('th-TH')}
+              </div>
+            </div>
+            {selectedTxn.note && (
+              <div style={{ background: CC.surface, borderRadius: 14, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: CC.ink }}>
+                📝 {selectedTxn.note}
+              </div>
+            )}
+            <button
+              onClick={async () => {
+                if (deleting) return
+                setDeleting(true)
+                await onDeleteTxn?.(selectedTxn)
+                setDeleting(false)
+                setSelectedTxn(null)
+              }}
+              disabled={deleting}
+              style={{ width: '100%', padding: '13px', borderRadius: 16, border: 'none', background: CC.emberSoft, color: CC.ember, fontSize: 14, fontWeight: 700, cursor: deleting ? 'default' : 'pointer', fontFamily: FONT }}>
+              {deleting ? '⏳ กำลังลบ...' : '🗑️ ลบรายการนี้'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -6,8 +6,13 @@ import { Leaf }     from '../components/Leaf'
 
 // ─── Static data ──────────────────────────────────────────────────────────
 const WALLET_TYPES = ['เงินฝากประจำ', 'PVD', 'กองทุน', 'อื่นๆ']
-const FIXED_ICONS  = ['🏠','📱','🚗','💡','💧','🌐','📺','🛡️','💳','🎵','🏋️','💊','📦','🎓']
 const MONTH_NAMES  = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
+
+function daysUntilDate(isoDate) {
+  const due = new Date(isoDate); due.setHours(0,0,0,0)
+  const now = new Date();        now.setHours(0,0,0,0)
+  return Math.ceil((due - now) / 86400000)
+}
 const ROOM_TYPES = [
   { id: 'trip',  l: 'ทริป',        ic: '🏕️' },
   { id: 'event', l: 'งาน/กิจกรรม', ic: '🎉' },
@@ -169,11 +174,6 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
   const [editFName,     setEditFName]     = useState('')
   const [editFAmt,      setEditFAmt]      = useState('')
   const [editFDay,      setEditFDay]      = useState('')
-  const [showAddFixed,  setShowAddFixed]  = useState(false)
-  const [newFName,      setNewFName]      = useState('')
-  const [newFAmt,       setNewFAmt]       = useState('')
-  const [newFDay,       setNewFDay]       = useState('')
-  const [newFIc,        setNewFIc]        = useState('🏠')
 
   // Family Pot state
   const [showFamilySetup, setShowFamilySetup] = useState(false)
@@ -270,13 +270,6 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
     setEditFixed(null)
   }
   const handleDeleteFixed = () => { onDeleteFixed(editFixed.id); setEditFixed(null) }
-  const handleAddFixed = () => {
-    if (!newFName.trim()) return
-    const amt = parseFloat(newFAmt.replace(/,/g, '')) || 0
-    const day = Math.min(31, Math.max(1, parseInt(newFDay, 10) || 1))
-    onSaveFixed({ id: Date.now().toString(), name: newFName.trim(), amt, cutDay: day, ic: newFIc })
-    setNewFName(''); setNewFAmt(''); setNewFDay(''); setNewFIc('🏠'); setShowAddFixed(false)
-  }
 
   // Shared Rooms handlers
   const handleCreateRoom = () => {
@@ -430,29 +423,38 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
           {/* Fixed expenses */}
           <div style={{ padding: '20px 20px 8px' }}>
             <div style={{ fontSize: 12, color: CC.walnut, letterSpacing: 1, textTransform: 'uppercase', fontWeight: 600, marginBottom: 12 }}>หนี้ / ค่าใช้จ่ายคงที่</div>
-            <div style={{ background: CC.surface, borderRadius: 24, border: `1px solid ${CC.border}` }}>
-              {fixedExpenses.map((fe, i) => {
-                const days = daysUntil(fe.cutDay); const urgent = days <= 3
-                return (
-                  <div key={fe.id || i} style={{ padding: '14px 18px', borderBottom: i < fixedExpenses.length - 1 ? `1px solid ${CC.border}` : 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 12, fontSize: 18, flexShrink: 0, background: urgent ? CC.emberSoft : CC.walnutSoft, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{fe.ic}</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>{fe.name}</div>
-                      <div style={{ fontSize: 12, color: urgent ? CC.ember : CC.walnut, marginTop: 2 }}>ตัดวันที่ {fe.cutDay} {curMonthName} · อีก {days} วัน</div>
+            {fixedExpenses.length === 0 ? (
+              <div style={{ background: CC.surface, borderRadius: 20, border: `1px solid ${CC.border}`, padding: '20px', textAlign: 'center', color: CC.walnut, fontSize: 13 }}>
+                ยังไม่มีรายการ — เพิ่มจากหน้าเก็บลูกโอ๊ก (ตั้งเวลา / ทุกเดือน)
+              </div>
+            ) : (
+              <div style={{ background: CC.surface, borderRadius: 24, border: `1px solid ${CC.border}` }}>
+                {fixedExpenses.map((fe, i) => {
+                  const type   = fe.type || 'monthly'
+                  const days   = type === 'once' ? daysUntilDate(fe.dueDate) : daysUntil(fe.cutDay)
+                  const urgent = days <= 3
+                  const dueLabel = type === 'once'
+                    ? `${new Date(fe.dueDate).getDate()} ${MONTH_NAMES[new Date(fe.dueDate).getMonth()]}`
+                    : `${fe.cutDay} ${curMonthName}`
+                  return (
+                    <div key={fe.id || i} style={{ padding: '14px 18px', borderBottom: i < fixedExpenses.length - 1 ? `1px solid ${CC.border}` : 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 12, fontSize: 18, flexShrink: 0, background: urgent ? CC.emberSoft : CC.walnutSoft, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{fe.ic}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600 }}>{fe.name}</div>
+                        <div style={{ fontSize: 12, color: urgent ? CC.ember : CC.walnut, marginTop: 2 }}>
+                          ตัดวันที่ {dueLabel} · {days < 0 ? 'เกินกำหนด' : `อีก ${days} วัน`}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', color: CC.ember }}>฿{fe.amt.toLocaleString('th-TH')}</div>
+                        <div style={{ fontSize: 10, color: CC.walnut }}>{type === 'once' ? 'ครั้งเดียว' : 'ทุกเดือน'}</div>
+                      </div>
+                      <button onClick={() => openEditFixed(fe)} style={editBtn}><PencilIcon /></button>
                     </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div style={{ fontSize: 15, fontWeight: 700, fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', color: CC.ember }}>฿{fe.amt.toLocaleString('th-TH')}</div>
-                      <div style={{ fontSize: 10, color: CC.walnut }}>ทุกเดือน</div>
-                    </div>
-                    <button onClick={() => openEditFixed(fe)} style={editBtn}><PencilIcon /></button>
-                  </div>
-                )
-              })}
-            </div>
-            <button onClick={() => setShowAddFixed(true)}
-              style={{ marginTop: 10, width: '100%', background: CC.surface, borderRadius: 20, border: `1.5px dashed ${CC.border}`, padding: '13px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', color: CC.walnut, fontSize: 13, fontFamily: FONT, fontWeight: 600 }}>
-              <span style={{ fontSize: 18 }}>+</span> เพิ่มค่าใช้จ่ายคงที่
-            </button>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           {/* Investment forest — derived from non-default wallets */}
@@ -896,29 +898,6 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
         </div>
       )}
 
-      {showAddFixed && (
-        <div style={overlay} onClick={() => setShowAddFixed(false)}>
-          <div style={sheet} onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: 17, fontWeight: 700, fontFamily: DISPLAY, marginBottom: 16 }}>เพิ่มค่าใช้จ่ายคงที่</div>
-            <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 8 }}>ไอคอน</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
-              {FIXED_ICONS.map(ic => (
-                <button key={ic} onClick={() => setNewFIc(ic)}
-                  style={{ width: 40, height: 40, borderRadius: 12, border: newFIc === ic ? `2px solid ${CC.walnut}` : `1px solid ${CC.border}`, background: newFIc === ic ? CC.walnutSoft : CC.surface, fontSize: 18, cursor: 'pointer' }}>
-                  {ic}
-                </button>
-              ))}
-            </div>
-            <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>ชื่อรายการ</div>
-            <input type="text" value={newFName} onChange={e => setNewFName(e.target.value)} placeholder="เช่น ค่าเช่า, Netflix" autoFocus style={{ ...inp, marginBottom: 12 }} />
-            <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>จำนวนเงิน (บาท)</div>
-            <input type="number" value={newFAmt} onChange={e => setNewFAmt(e.target.value)} placeholder="0" style={{ ...inp, marginBottom: 12, fontVariantNumeric: 'tabular-nums' }} />
-            <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>วันตัดทุกเดือน (1–31)</div>
-            <input type="number" min="1" max="31" value={newFDay} onChange={e => setNewFDay(e.target.value)} placeholder="1" style={inp} />
-            <button onClick={handleAddFixed} style={btnPri}>เพิ่มรายการ</button>
-          </div>
-        </div>
-      )}
 
       {/* ══════════════ MODALS — SHARED ROOMS ══════════════ */}
 

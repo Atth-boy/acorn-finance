@@ -39,7 +39,8 @@ export default function App() {
   const [familyData,      setFamilyData]      = useState(undefined)
   const [familyEntryOpen, setFamilyEntryOpen] = useState(false)
   const [familyTxns, setFamilyTxns]           = useState([])
-  const familyUnsubRef = useRef(null)
+  const familyUnsubRef  = useRef(null)
+  const processedRef    = useRef(new Set())
 
   useEffect(() => {
     return onAuthStateChanged(auth, u => setUser(u ?? null))
@@ -57,6 +58,35 @@ export default function App() {
     })
     return () => { unsubTxns(); unsubWallets(); unsubFixed(); unsubSettings() }
   }, [user])
+
+  // Process due scheduled / monthly fixed expenses
+  useEffect(() => {
+    if (!user || !wallets.length) return
+    const defaultWallet = wallets.find(w => w.isDefault)
+    if (!defaultWallet) return
+    const now      = new Date()
+    const today    = now.getDate()
+    const ymKey    = `${now.getFullYear()}-${now.getMonth()}`
+    fixedExpenses.forEach(async fe => {
+      if (processedRef.current.has(fe.id)) return
+      const type = fe.type || 'monthly'
+      if (type === 'once') {
+        const due = new Date(fe.dueDate); due.setHours(0,0,0,0)
+        const todayD = new Date(); todayD.setHours(0,0,0,0)
+        if (due <= todayD) {
+          processedRef.current.add(fe.id)
+          await storage.upsertWallet(user.uid, { ...defaultWallet, amt: defaultWallet.amt - fe.amt })
+          await storage.deleteFixed(user.uid, fe.id)
+        }
+      } else if (type === 'monthly') {
+        if (fe.lastDeducted !== ymKey && today >= (fe.cutDay ?? 1)) {
+          processedRef.current.add(fe.id)
+          await storage.upsertWallet(user.uid, { ...defaultWallet, amt: defaultWallet.amt - fe.amt })
+          await storage.upsertFixed(user.uid, { ...fe, lastDeducted: ymKey })
+        }
+      }
+    })
+  }, [user, fixedExpenses, wallets])
 
   useEffect(() => {
     if (!user) return
@@ -113,7 +143,29 @@ export default function App() {
     }
     return storage.upsertFixed(user.uid, fe)
   }
-  const deleteFixed  = (id)      => storage.deleteFixed(user.uid, id)
+  const deleteFixed  = (id) => storage.deleteFixed(user.uid, id)
+
+  const deleteTxn = async (txn) => {
+    await storage.deleteTxn(user.uid, txn._id)
+    const defaultWallet = wallets.find(w => w.isDefault)
+    if (defaultWallet) {
+      await storage.upsertWallet(user.uid, { ...defaultWallet, amt: defaultWallet.amt - txn.amt })
+    }
+  }
+
+  const addScheduledFixed = async (item) => {
+    await upsertFixed(item)
+    setEntryOpen(false)
+    setTab('wallets')
+    showToast('บันทึกรายการตั้งเวลาแล้ว 📅')
+  }
+
+  const addMonthlyFixed = async (item) => {
+    await upsertFixed(item)
+    setEntryOpen(false)
+    setTab('wallets')
+    showToast('บันทึกรายการประจำเดือนแล้ว 📆')
+  }
 
   const addFamilyTxn = async (txn) => {
     if (!familyData?.code) return
@@ -164,7 +216,7 @@ export default function App() {
         overflow: 'hidden',
         color: CC.ink,
       }}>
-        {tab === 'home'     && <HomeScreen txns={txns} user={user} wallets={wallets} fixedExpenses={fixedExpenses} />}
+        {tab === 'home'     && <HomeScreen txns={txns} user={user} wallets={wallets} fixedExpenses={fixedExpenses} onDeleteTxn={deleteTxn} />}
         {tab === 'wallets'  && (
           <WalletsScreen
             txns={txns}
@@ -199,7 +251,13 @@ export default function App() {
         )}
 
         {entryOpen && (
-          <EntryScreen addTxn={addTxn} close={() => setEntryOpen(false)} wallets={wallets} />
+          <EntryScreen
+            addTxn={addTxn}
+            addScheduledFixed={addScheduledFixed}
+            addMonthlyFixed={addMonthlyFixed}
+            close={() => setEntryOpen(false)}
+            wallets={wallets}
+          />
         )}
 
         {familyEntryOpen && (
