@@ -22,6 +22,30 @@ const MONTH_NAMES = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.
 
 const now = () => new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
 
+function compressImage(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        const MAX = 800
+        let { width, height } = img
+        if (width > MAX || height > MAX) {
+          const ratio = Math.min(MAX / width, MAX / height)
+          width = Math.round(width * ratio)
+          height = Math.round(height * ratio)
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width; canvas.height = height
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height)
+        resolve(canvas.toDataURL('image/jpeg', 0.6))
+      }
+      img.src = e.target.result
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
 export function EntryScreen({ addTxn, addScheduledFixed, addMonthlyFixed, close, wallets = [] }) {
   const [type,        setType]        = useState('expense')
   const [amount,      setAmount]      = useState('0')
@@ -53,10 +77,11 @@ export function EntryScreen({ addTxn, addScheduledFixed, addMonthlyFixed, close,
     if (m === 'saving')   setShowWalletPick(true)
   }
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files[0]
     if (!file) return
-    setReceipt({ url: URL.createObjectURL(file), name: file.name })
+    const compressed = await compressImage(file)
+    setReceipt({ url: compressed, name: file.name })
   }
 
   const submit = async () => {
@@ -72,6 +97,7 @@ export function EntryScreen({ addTxn, addScheduledFixed, addMonthlyFixed, close,
         await addTxn({
           id: Date.now(), label, cat: 'รับเข้า', ic: '💰',
           amt: n, time: now(), mode: 'daily', note: note.trim() || null,
+          receiptImg: receipt?.url || null,
         })
       } else if (mode === 'schedule') {
         await addScheduledFixed({
@@ -89,6 +115,7 @@ export function EntryScreen({ addTxn, addScheduledFixed, addMonthlyFixed, close,
           amt: -n, time: now(), mode, note: note.trim() || null,
           wallet: mode === 'saving' ? savedWallet?.name : null,
           walletId: mode === 'saving' ? savedWallet?.id  : null,
+          receiptImg: receipt?.url || null,
         })
       }
     } finally {

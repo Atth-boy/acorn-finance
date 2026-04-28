@@ -6,11 +6,15 @@ import { Leaf }     from '../components/Leaf'
 
 const DAY_LABELS = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส']
 
-export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [], onDeleteTxn }) {
+export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [], onDeleteTxn, onEditTxn }) {
   const [chartPeriod,  setChartPeriod]  = useState('week')
   const [showAll,      setShowAll]      = useState(false)
   const [selectedTxn,  setSelectedTxn]  = useState(null)
   const [deleting,     setDeleting]     = useState(false)
+  const [editMode,     setEditMode]     = useState(false)
+  const [editLabel,    setEditLabel]    = useState('')
+  const [editNote,     setEditNote]     = useState('')
+  const [saving,       setSaving]       = useState(false)
 
   const firstName = user?.displayName?.split(' ')[0] || 'คุณ'
   const now        = new Date()
@@ -116,7 +120,7 @@ export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [], onDel
                 </span>
               </div>
               <div style={{ fontSize: 12, color: CC.walnut, marginTop: 4, fontStyle: 'italic' }}>
-                "เก็บเพิ่มอีก ฿{Math.max(0, 40000 - balance).toLocaleString('th-TH')} ตามแผนนะ 🌰"
+                "เก็บลูกโอ๊กเพิ่มตามแผนนะ 🌰"
               </div>
             </div>
           </div>
@@ -256,36 +260,92 @@ export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [], onDel
       {/* Transaction detail sheet */}
       {selectedTxn && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: 'rgba(42,31,18,0.55)', display: 'flex', alignItems: 'flex-end' }}
-          onClick={() => setSelectedTxn(null)}>
+          onClick={() => { setSelectedTxn(null); setEditMode(false) }}>
           <div style={{ width: '100%', background: CC.bg, borderRadius: '24px 24px 0 0', padding: '24px 20px 40px' }}
             onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
               <div style={{ width: 52, height: 52, borderRadius: 16, background: selectedTxn.amt > 0 ? CC.mossSoft : CC.amberSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>{selectedTxn.ic}</div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 17, fontWeight: 700, fontFamily: DISPLAY }}>{selectedTxn.label}</div>
+                <div style={{ fontSize: 17, fontWeight: 700, fontFamily: DISPLAY }}>{editMode ? editLabel || selectedTxn.label : selectedTxn.label}</div>
                 <div style={{ fontSize: 12, color: CC.walnut, marginTop: 2 }}>{selectedTxn.cat} · {selectedTxn.time}</div>
               </div>
               <div style={{ fontSize: 22, fontWeight: 700, fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', color: selectedTxn.amt > 0 ? CC.moss : CC.ember }}>
                 {selectedTxn.amt > 0 ? '+' : '−'}฿{Math.abs(selectedTxn.amt).toLocaleString('th-TH')}
               </div>
             </div>
-            {selectedTxn.note && (
-              <div style={{ background: CC.surface, borderRadius: 14, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: CC.ink }}>
-                📝 {selectedTxn.note}
-              </div>
+
+            {!editMode ? (
+              <>
+                {selectedTxn.receiptImg && (
+                  <div style={{ marginBottom: 14, borderRadius: 12, overflow: 'hidden', maxHeight: 180 }}>
+                    <img src={selectedTxn.receiptImg} alt="ใบเสร็จ" style={{ width: '100%', objectFit: 'cover', display: 'block' }} />
+                  </div>
+                )}
+                {selectedTxn.note && (
+                  <div style={{ background: CC.surface, borderRadius: 14, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: CC.ink }}>
+                    📝 {selectedTxn.note}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    onClick={() => { setEditLabel(selectedTxn.label); setEditNote(selectedTxn.note || ''); setEditMode(true) }}
+                    style={{ flex: 1, padding: '13px', borderRadius: 16, border: `1px solid ${CC.border}`, background: CC.surface, color: CC.ink, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>
+                    ✏️ แก้ไข
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (deleting) return
+                      setDeleting(true)
+                      await onDeleteTxn?.(selectedTxn)
+                      setDeleting(false)
+                      setSelectedTxn(null)
+                    }}
+                    disabled={deleting}
+                    style={{ flex: 1, padding: '13px', borderRadius: 16, border: 'none', background: CC.emberSoft, color: CC.ember, fontSize: 14, fontWeight: 700, cursor: deleting ? 'default' : 'pointer', fontFamily: FONT }}>
+                    {deleting ? '⏳ กำลังลบ...' : '🗑️ ลบ'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>ชื่อรายการ</div>
+                <input
+                  type="text"
+                  value={editLabel}
+                  onChange={e => setEditLabel(e.target.value)}
+                  autoFocus
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: 14, border: `1.5px solid ${CC.border}`, background: CC.surface, fontSize: 14, fontFamily: FONT, color: CC.ink, boxSizing: 'border-box', outline: 'none', marginBottom: 12 }}
+                />
+                <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>หมายเหตุ</div>
+                <input
+                  type="text"
+                  value={editNote}
+                  onChange={e => setEditNote(e.target.value)}
+                  placeholder="(ไม่มี)"
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: 14, border: `1.5px solid ${CC.border}`, background: CC.surface, fontSize: 14, fontFamily: FONT, color: CC.ink, boxSizing: 'border-box', outline: 'none', marginBottom: 14 }}
+                />
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    onClick={() => setEditMode(false)}
+                    style={{ flex: 1, padding: '13px', borderRadius: 16, border: `1px solid ${CC.border}`, background: CC.surface, color: CC.walnut, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>
+                    ยกเลิก
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (saving) return
+                      setSaving(true)
+                      await onEditTxn?.({ ...selectedTxn, label: editLabel.trim() || selectedTxn.label, note: editNote.trim() || null })
+                      setSaving(false)
+                      setSelectedTxn(null)
+                      setEditMode(false)
+                    }}
+                    disabled={saving}
+                    style={{ flex: 1, padding: '13px', borderRadius: 16, border: 'none', background: CC.walnut, color: '#fff', fontSize: 14, fontWeight: 700, cursor: saving ? 'default' : 'pointer', fontFamily: FONT }}>
+                    {saving ? 'กำลังบันทึก...' : '💾 บันทึก'}
+                  </button>
+                </div>
+              </>
             )}
-            <button
-              onClick={async () => {
-                if (deleting) return
-                setDeleting(true)
-                await onDeleteTxn?.(selectedTxn)
-                setDeleting(false)
-                setSelectedTxn(null)
-              }}
-              disabled={deleting}
-              style={{ width: '100%', padding: '13px', borderRadius: 16, border: 'none', background: CC.emberSoft, color: CC.ember, fontSize: 14, fontWeight: 700, cursor: deleting ? 'default' : 'pointer', fontFamily: FONT }}>
-              {deleting ? '⏳ กำลังลบ...' : '🗑️ ลบรายการนี้'}
-            </button>
           </div>
         </div>
       )}

@@ -24,6 +24,12 @@ export default defineConfig(({ mode }) => {
           theme_color: '#7A4F2A',
           icons: [
             {
+              src: 'apple-touch-icon.png',
+              sizes: '180x180',
+              type: 'image/png',
+              purpose: 'any',
+            },
+            {
               src: 'icon.svg',
               sizes: 'any',
               type: 'image/svg+xml',

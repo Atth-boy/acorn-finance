@@ -17,28 +17,7 @@ const ROOM_TYPES = [
   { id: 'trip',  l: 'ทริป',        ic: '🏕️' },
   { id: 'event', l: 'งาน/กิจกรรม', ic: '🎉' },
 ]
-const INIT_ROOMS = [
-  {
-    id: 'r1', name: 'ทริปเชียงใหม่', type: 'trip', ic: '🏕️', code: 'CM2025',
-    members: [{ name: 'แอ', bg: '#5A6B3B' }, { name: 'เบ', bg: '#C8924A' }, { name: 'ซี', bg: '#7A4F2A' }],
-    balance: -4850,
-    txns: [
-      { label: 'โรงแรม', amt: -2400, by: 'แอ', ic: '🏨' },
-      { label: 'อาหารเย็น', amt: -850, by: 'เบ', ic: '🍽️' },
-      { label: 'น้ำมัน', amt: -1600, by: 'ซี', ic: '⛽' },
-    ],
-  },
-  {
-    id: 'r2', name: 'กองกลางบ้าน', type: 'event', ic: '🏠', code: 'HOME01',
-    members: [{ name: 'แอ', bg: '#5A6B3B' }, { name: 'ดี', bg: '#A8482E' }],
-    balance: 1800,
-    txns: [
-      { label: 'โอนเข้ากอง', amt: 2000, by: 'แอ', ic: '💰' },
-      { label: 'ค่าไฟ', amt: -1200, by: 'ดี', ic: '⚡' },
-      { label: 'โอนเข้ากอง', amt: 1000, by: 'ดี', ic: '💰' },
-    ],
-  },
-]
+const INIT_ROOMS = []
 const FAMILY_MOCK_MEMBERS = [
   { name: 'แม่', bg: '#5A6B3B', amt: 4500, share: 0.36 },
   { name: 'พ่อ', bg: '#7A4F2A', amt: 3800, share: 0.31 },
@@ -200,11 +179,13 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
   const [createdCode,    setCreatedCode]    = useState(null)
   const [joinCode,       setJoinCode]       = useState('')
   const [activeRoom,     setActiveRoom]     = useState(null)
-  const [addEntryRoom,   setAddEntryRoom]   = useState(null)
-  const [entryLabel,     setEntryLabel]     = useState('')
-  const [entryAmt,       setEntryAmt]       = useState('')
-  const [entryBy,        setEntryBy]        = useState(null)
-  const [copied,         setCopied]         = useState(false)
+  const [addEntryRoom,      setAddEntryRoom]      = useState(null)
+  const [entryLabel,        setEntryLabel]        = useState('')
+  const [entryAmt,          setEntryAmt]          = useState('')
+  const [entryBy,           setEntryBy]           = useState(null)
+  const [customMemberName,  setCustomMemberName]  = useState('')
+  const [copied,            setCopied]            = useState(false)
+  const [showRoomSummary,   setShowRoomSummary]   = useState(false)
 
   // Derived
   const totalAmt       = wallets.reduce((s, w) => s + w.amt, 0)
@@ -250,7 +231,7 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
     if (!newWalletName.trim()) return
     onUpsertWallet({
       id: Date.now().toString(), name: newWalletName.trim(), sub: newWalletType, amt: 0,
-      ic: newWalletType === 'PVD' ? '🏢' : newWalletType === 'กองทุน' ? '📈' : '🏦',
+      ic: newWalletType === 'PVD' ? '🏢' : newWalletType === 'กองทุน' ? '📈' : newWalletType === 'เงินฝากประจำ' ? '💰' : '🗄️',
       tint: CC.mossSoft, tone: CC.moss,
     })
     setNewWalletName(''); setNewWalletType(WALLET_TYPES[0]); setShowAddWallet(false)
@@ -297,7 +278,7 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
     const txn = { label: entryLabel || 'รายการ', amt: -Math.abs(amt), by: entryBy || addEntryRoom.members[0]?.name, ic: '💸' }
     setRooms(rs => rs.map(r => r.id === addEntryRoom.id ? { ...r, balance: r.balance + txn.amt, txns: [txn, ...r.txns] } : r))
     if (activeRoom?.id === addEntryRoom.id) setActiveRoom(prev => ({ ...prev, balance: prev.balance + txn.amt, txns: [txn, ...prev.txns] }))
-    setEntryLabel(''); setEntryAmt(''); setEntryBy(null); setAddEntryRoom(null)
+    setEntryLabel(''); setEntryAmt(''); setEntryBy(null); setCustomMemberName(''); setAddEntryRoom(null)
   }
 
   // Family Pot handlers
@@ -761,17 +742,6 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
                       </div>
                     ))}
                   </div>
-                  {/* House code */}
-                  <div style={{ paddingTop: 12, borderTop: `1px dashed ${CC.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div>
-                      <div style={{ fontSize: 10, color: CC.walnut, letterSpacing: 1, marginBottom: 2 }}>รหัสบ้าน</div>
-                      <div style={{ fontSize: 20, fontFamily: 'monospace', fontWeight: 700, letterSpacing: 4, color: CC.walnut }}>{familyCode}</div>
-                    </div>
-                    <button onClick={handleCopyFamilyCode}
-                      style={{ display: 'flex', alignItems: 'center', gap: 6, background: CC.bg, border: `1px solid ${CC.border}`, borderRadius: 10, padding: '7px 12px', color: CC.walnut, fontSize: 12, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>
-                      <CopyIcon/> {copiedFamily ? 'คัดลอก ✓' : 'คัดลอก'}
-                    </button>
-                  </div>
                 </div>
               </div>
 
@@ -956,7 +926,7 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
 
       {/* Room detail sheet */}
       {activeRoom && (
-        <div style={overlay} onClick={() => setActiveRoom(null)}>
+        <div style={overlay} onClick={() => { setActiveRoom(null); setShowRoomSummary(false) }}>
           <div style={{ ...sheet, maxHeight: '80vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
               <div style={{ width: 50, height: 50, borderRadius: 16, background: roomTone(activeRoom.type).bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>{activeRoom.ic}</div>
@@ -974,17 +944,41 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
                 <div style={{ fontSize: 11, color: CC.walnut }}>{activeRoom.balance < 0 ? 'รายจ่ายรวม' : 'คงเหลือ'}</div>
               </div>
             </div>
-            {/* Room code */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: CC.bg, border: `1px solid ${CC.border}`, borderRadius: 12, padding: '10px 14px', marginBottom: 16 }}>
+            {/* Room code + summary toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: CC.bg, border: `1px solid ${CC.border}`, borderRadius: 12, padding: '10px 14px', marginBottom: 10 }}>
               <div>
                 <div style={{ fontSize: 10, color: CC.walnut, letterSpacing: 1, marginBottom: 2 }}>รหัสห้อง</div>
                 <div style={{ fontSize: 18, fontFamily: 'monospace', fontWeight: 700, letterSpacing: 3 }}>{activeRoom.code}</div>
               </div>
-              <button onClick={() => handleCopyCode(activeRoom.code)}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, background: CC.surface, border: `1px solid ${CC.border}`, borderRadius: 10, padding: '7px 12px', color: CC.walnut, fontSize: 12, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>
-                <CopyIcon /> {copied ? 'คัดลอก ✓' : 'คัดลอก'}
+              <button onClick={() => setShowRoomSummary(s => !s)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, background: showRoomSummary ? CC.amberSoft : CC.surface, border: `1px solid ${CC.border}`, borderRadius: 10, padding: '7px 12px', color: CC.walnut, fontSize: 12, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>
+                💰 สรุป
               </button>
             </div>
+            {/* Per-person summary */}
+            {showRoomSummary && (() => {
+              const byPerson = {}
+              activeRoom.txns.forEach(t => {
+                if (!byPerson[t.by]) byPerson[t.by] = 0
+                byPerson[t.by] += Math.abs(t.amt)
+              })
+              const total = Object.values(byPerson).reduce((s, a) => s + a, 0)
+              return (
+                <div style={{ marginBottom: 14, background: CC.amberSoft, borderRadius: 14, padding: '12px 14px', border: `1px solid ${CC.border}` }}>
+                  <div style={{ fontSize: 11, color: CC.walnut, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 10 }}>สรุปค่าใช้จ่ายแต่ละคน</div>
+                  {Object.entries(byPerson).map(([name, amt], i, arr) => (
+                    <div key={name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 8, marginBottom: 8, borderBottom: i < arr.length - 1 ? `1px solid ${CC.border}` : 'none' }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: CC.ink }}>{name}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: CC.ember, fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums' }}>฿{amt.toLocaleString('th-TH')}</div>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 6, borderTop: `1px dashed ${CC.border}` }}>
+                    <div style={{ fontSize: 12, color: CC.walnut, fontWeight: 600 }}>รวมทั้งหมด</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: CC.ink, fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums' }}>฿{total.toLocaleString('th-TH')}</div>
+                  </div>
+                </div>
+              )
+            })()}
             {/* Transactions */}
             <div style={{ fontSize: 12, color: CC.walnut, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>รายการ</div>
             {activeRoom.txns.length === 0
@@ -1011,7 +1005,7 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
 
       {/* Add entry to shared room */}
       {addEntryRoom && (
-        <div style={{ ...overlay, zIndex: 110 }} onClick={() => setAddEntryRoom(null)}>
+        <div style={{ ...overlay, zIndex: 110 }} onClick={() => { setAddEntryRoom(null); setCustomMemberName('') }}>
           <div style={sheet} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 17, fontWeight: 700, fontFamily: DISPLAY, marginBottom: 16 }}>+ เพิ่มรายการใน {addEntryRoom.name}</div>
             <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>รายการ</div>
@@ -1019,7 +1013,7 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
             <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>จำนวนเงิน (บาท)</div>
             <input type="number" value={entryAmt} onChange={e => setEntryAmt(e.target.value)} placeholder="0" style={{ ...inp, marginBottom: 12, fontVariantNumeric: 'tabular-nums' }} />
             <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 8 }}>จ่ายโดย</div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
               {addEntryRoom.members.map((m, i) => (
                 <button key={i} onClick={() => setEntryBy(m.name)}
                   style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 100, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, background: entryBy === m.name ? CC.moss : CC.bg, color: entryBy === m.name ? '#fff' : CC.walnut, border: entryBy === m.name ? 'none' : `1px solid ${CC.border}` }}>
@@ -1027,7 +1021,25 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
                 </button>
               ))}
             </div>
-            <button onClick={handleAddEntry} style={btnGreen}>บันทึกรายการ</button>
+            {/* Custom name input */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+              <input
+                type="text"
+                value={customMemberName}
+                onChange={e => setCustomMemberName(e.target.value)}
+                placeholder="+ ชื่อคนอื่น"
+                style={{ ...inp, flex: 1 }}
+              />
+              <button
+                onClick={() => { const n = customMemberName.trim(); if (n) { setEntryBy(n); setCustomMemberName('') } }}
+                style={{ padding: '10px 14px', borderRadius: 14, background: CC.walnutSoft, color: CC.walnut, border: 'none', cursor: 'pointer', fontSize: 13, fontFamily: FONT, fontWeight: 600, flexShrink: 0 }}>
+                เลือก
+              </button>
+            </div>
+            {entryBy && !addEntryRoom.members.find(m => m.name === entryBy) && (
+              <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 4 }}>จ่ายโดย: <b style={{ color: CC.ink }}>{entryBy}</b></div>
+            )}
+            <button onClick={handleAddEntry} style={{ ...btnGreen, marginTop: 10 }}>บันทึกรายการ</button>
           </div>
         </div>
       )}

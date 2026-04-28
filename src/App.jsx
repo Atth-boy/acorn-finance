@@ -153,6 +153,11 @@ export default function App() {
     }
   }
 
+  const editTxn = async (txn) => {
+    const { _id, ...rest } = txn
+    await storage.updateTxn(user.uid, _id, rest)
+  }
+
   const addScheduledFixed = async (item) => {
     await upsertFixed(item)
     setEntryOpen(false)
@@ -216,7 +221,7 @@ export default function App() {
         overflow: 'hidden',
         color: CC.ink,
       }}>
-        {tab === 'home'     && <HomeScreen txns={txns} user={user} wallets={wallets} fixedExpenses={fixedExpenses} onDeleteTxn={deleteTxn} />}
+        {tab === 'home'     && <HomeScreen txns={txns} user={user} wallets={wallets} fixedExpenses={fixedExpenses} onDeleteTxn={deleteTxn} onEditTxn={editTxn} />}
         {tab === 'wallets'  && (
           <WalletsScreen
             txns={txns}
