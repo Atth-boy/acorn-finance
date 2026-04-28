@@ -109,6 +109,7 @@ export const storage = {
   },
 
   async seedFixedIfEmpty(uid, seeds) {
+    if (!seeds.length) return
     const snap = await getDocs(fixedCol(uid))
     if (!snap.empty) return
     const batch = writeBatch(db)

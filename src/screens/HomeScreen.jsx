@@ -30,7 +30,7 @@ export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [] }) {
   const totalIn  = monthlyTxns.filter(t => t.amt > 0).reduce((s, t) => s + t.amt, 0)
   const totalOut = monthlyTxns.filter(t => t.amt < 0).reduce((s, t) => s + Math.abs(t.amt), 0)
   const defaultWallet = wallets.find(w => w.isDefault)
-  const balance  = (defaultWallet?.amt ?? 0) + totalIn - totalOut
+  const balance  = defaultWallet?.amt ?? 0
   const recent   = [...todayTxns].reverse().slice(0, 10)
 
   const todayDay    = now.getDate()

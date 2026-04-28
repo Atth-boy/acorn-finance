@@ -72,6 +72,7 @@ export function EntryScreen({ addTxn, close, wallets = [] }) {
       scheduleDate: scheduleDate ? scheduleDate.toISOString() : null,
       note:         note.trim() || null,
       wallet:       savedWallet?.name || null,
+      walletId:     savedWallet?.id   || null,
     })
   }
 

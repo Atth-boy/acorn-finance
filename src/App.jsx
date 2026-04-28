@@ -6,16 +6,9 @@ import { familyLib } from './lib/family'
 import { CC, FONT, PAPER } from './tokens'
 
 const INIT_WALLETS = [
-  { id: 'kbank', name: 'กสิกรไทย', sub: 'บัญชีออมทรัพย์', amt: 184320, ic: '🏦', tint: CC.mossSoft,   tone: CC.moss,   isDefault: true },
-  { id: 'scb',   name: 'SCB Easy',  sub: 'กระแสรายวัน',    amt: 22150,  ic: '🏦', tint: CC.amberSoft,  tone: CC.amber  },
-  { id: 'cash',  name: 'เงินสด',    sub: 'กระเป๋าใบโปรด',  amt: 1850,   ic: '👛', tint: CC.walnutSoft, tone: CC.walnut },
-  { id: 'ktc',   name: 'KTC Visa',  sub: 'หนี้บัตรเครดิต', amt: -8420,  ic: '💳', tint: CC.emberSoft,  tone: CC.ember  },
+  { id: 'default', name: 'บัญชีหลัก', sub: 'บัญชีออมทรัพย์', amt: 0, ic: '🏦', tint: CC.mossSoft, tone: CC.moss, isDefault: true },
 ]
-const INIT_FIXED = [
-  { id: 'rent', name: 'ค่าเช่า',     amt: 8500, cutDay: 1,  ic: '🏠' },
-  { id: 'nflx', name: 'Netflix',     amt: 279,  cutDay: 15, ic: '📺' },
-  { id: 'ins',  name: 'ประกันชีวิต', amt: 2400, cutDay: 20, ic: '🛡️' },
-]
+const INIT_FIXED = []
 
 import { LoginScreen }       from './screens/LoginScreen'
 import { HomeScreen }        from './screens/HomeScreen'
@@ -54,7 +47,6 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return
-    storage.seedIfEmpty(user.uid)
     storage.seedWalletsIfEmpty(user.uid, INIT_WALLETS)
     storage.seedFixedIfEmpty(user.uid, INIT_FIXED)
     const unsubTxns     = storage.subscribe(user.uid, setTxns)
@@ -85,6 +77,16 @@ export default function App() {
 
   const addTxn = async (txn) => {
     await storage.add(user.uid, txn)
+    // Sync default wallet balance
+    const defaultWallet = wallets.find(w => w.isDefault)
+    if (defaultWallet) {
+      await storage.upsertWallet(user.uid, { ...defaultWallet, amt: defaultWallet.amt + txn.amt })
+    }
+    // Saving mode: also add to target savings wallet
+    if (txn.mode === 'saving' && txn.walletId) {
+      const target = wallets.find(w => w.id === txn.walletId)
+      if (target) await storage.upsertWallet(user.uid, { ...target, amt: target.amt + Math.abs(txn.amt) })
+    }
     setEntryOpen(false)
     showToast('เก็บลงกรุแล้ว! 🌰')
   }

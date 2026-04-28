@@ -176,6 +176,7 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
   const [newFIc,        setNewFIc]        = useState('🏠')
 
   // Family Pot state
+  const [showFamilySetup, setShowFamilySetup] = useState(false)
   const [showJoinFamily, setShowJoinFamily] = useState(false)
   const [joinFamilyCode, setJoinFamilyCode] = useState('')
   const [joinFamilyErr,  setJoinFamilyErr]  = useState('')
@@ -695,23 +696,15 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
           {/* ── No family yet ── */}
           {familyData === null && (
             <div style={{ padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-              <div style={{ position: 'relative' }}>
-                <Squirrel size={110} mood="happy"/>
-              </div>
+              <Squirrel size={110} mood="happy"/>
               <div style={{ fontSize: 16, fontWeight: 700, fontFamily: DISPLAY, color: CC.ink, textAlign: 'center' }}>ยังไม่มีกองกลางครอบครัว</div>
               <div style={{ fontSize: 13, color: CC.walnut, textAlign: 'center', lineHeight: 1.6, maxWidth: 260 }}>
-                สร้างบ้านใหม่และแชร์รหัส หรือ<br/>กรอกรหัสบ้านที่ได้รับจากครอบครัว
+                เชื่อมต่อกับครอบครัวเพื่อบันทึกรายการร่วมกัน
               </div>
               <button
-                onClick={handleCreateSubmit}
-                disabled={creatingFamily}
-                style={{ width: '100%', maxWidth: 280, padding: '14px', borderRadius: 18, border: 'none', background: CC.walnut, color: '#fff', fontSize: 15, fontWeight: 700, fontFamily: FONT, cursor: creatingFamily ? 'default' : 'pointer', opacity: creatingFamily ? 0.6 : 1 }}>
-                {creatingFamily ? 'กำลังสร้าง...' : '🏡 สร้างบ้านใหม่'}
-              </button>
-              <button
-                onClick={() => { setShowJoinFamily(true); setJoinFamilyErr('') }}
-                style={{ width: '100%', maxWidth: 280, padding: '13px', borderRadius: 18, border: `1.5px solid ${CC.border}`, background: 'none', color: CC.walnut, fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>
-                🔑 เข้าร่วมด้วยรหัสบ้าน
+                onClick={() => setShowFamilySetup(true)}
+                style={{ width: '100%', maxWidth: 280, padding: '14px', borderRadius: 18, border: 'none', background: CC.walnut, color: '#fff', fontSize: 15, fontWeight: 700, fontFamily: FONT, cursor: 'pointer', boxShadow: '0 4px 14px rgba(122,79,42,0.3)' }}>
+                🌳 ตั้งค่ากองกลางครอบครัว
               </button>
             </div>
           )}
@@ -866,13 +859,23 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
           <div style={sheet} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 17, fontWeight: 700, fontFamily: DISPLAY, marginBottom: 16 }}>{editWallet.ic} แก้ไขกระเป๋า</div>
             <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>ชื่อบัญชี</div>
-            <input type="text" value={editWName} onChange={e => setEditWName(e.target.value)} style={{ ...inp, marginBottom: 12 }} />
+            <input type="text" value={editWName} onChange={e => setEditWName(e.target.value)} autoFocus style={{ ...inp, marginBottom: 12 }} />
             <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>คำอธิบาย</div>
-            <input type="text" value={editWSub} onChange={e => setEditWSub(e.target.value)} style={{ ...inp, marginBottom: 12 }} />
-            <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>ยอดเงิน (บาท)</div>
-            <input type="number" value={editWAmt} onChange={e => setEditWAmt(e.target.value)} autoFocus style={{ ...inp, fontVariantNumeric: 'tabular-nums' }} />
+            <input type="text" value={editWSub} onChange={e => setEditWSub(e.target.value)} style={{ ...inp, marginBottom: editWallet.isDefault ? 4 : 12 }} />
+            {editWallet.isDefault ? (
+              <div style={{ fontSize: 11, color: CC.walnut, marginBottom: 4, opacity: 0.7 }}>
+                💡 ยอดเงินอัปเดตอัตโนมัติจากการบันทึกรายรับรายจ่าย
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>ยอดเงิน (บาท)</div>
+                <input type="number" value={editWAmt} onChange={e => setEditWAmt(e.target.value)} style={{ ...inp, fontVariantNumeric: 'tabular-nums' }} />
+              </>
+            )}
             <button onClick={handleSaveWallet} style={btnPri}>บันทึก</button>
-            <button onClick={handleDeleteWallet} style={btnDng}>ลบกระเป๋านี้</button>
+            {!editWallet.isDefault && (
+              <button onClick={handleDeleteWallet} style={btnDng}>ลบกระเป๋านี้</button>
+            )}
           </div>
         </div>
       )}
@@ -1046,6 +1049,31 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
               ))}
             </div>
             <button onClick={handleAddEntry} style={btnGreen}>บันทึกรายการ</button>
+          </div>
+        </div>
+      )}
+
+      {/* Family setup — choice sheet */}
+      {showFamilySetup && (
+        <div style={overlay} onClick={() => setShowFamilySetup(false)}>
+          <div style={sheet} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 17, fontWeight: 700, fontFamily: DISPLAY, marginBottom: 6 }}>🌳 ตั้งค่ากองกลางครอบครัว</div>
+            <div style={{ fontSize: 13, color: CC.walnut, marginBottom: 20 }}>เลือกว่าต้องการทำอะไร</div>
+            <button
+              onClick={() => { setShowFamilySetup(false); setShowJoinFamily(true); setJoinFamilyErr('') }}
+              style={{ width: '100%', padding: '16px', borderRadius: 18, border: `1.5px solid ${CC.border}`, background: CC.surface, textAlign: 'left', cursor: 'pointer', fontFamily: FONT, marginBottom: 10 }}>
+              <div style={{ fontSize: 22, marginBottom: 4 }}>🔑</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: CC.ink }}>มีรหัสบ้านอยู่แล้ว</div>
+              <div style={{ fontSize: 12, color: CC.walnut, marginTop: 2 }}>กรอกรหัสที่ได้รับจากครอบครัว</div>
+            </button>
+            <button
+              onClick={async () => { setShowFamilySetup(false); await handleCreateSubmit() }}
+              disabled={creatingFamily}
+              style={{ width: '100%', padding: '16px', borderRadius: 18, border: 'none', background: CC.walnutSoft, textAlign: 'left', cursor: creatingFamily ? 'default' : 'pointer', fontFamily: FONT, opacity: creatingFamily ? 0.6 : 1 }}>
+              <div style={{ fontSize: 22, marginBottom: 4 }}>🏡</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: CC.ink }}>{creatingFamily ? 'กำลังสร้าง...' : 'สร้างบ้านใหม่'}</div>
+              <div style={{ fontSize: 12, color: CC.walnut, marginTop: 2 }}>เป็นคนแรกในครอบครัว แล้วแชร์รหัสให้คนอื่น</div>
+            </button>
           </div>
         </div>
       )}
