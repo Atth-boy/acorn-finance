@@ -69,9 +69,9 @@ export function FamilyEntryScreen({ addFamilyTxn, close }) {
     const now = new Date()
     addFamilyTxn({
       id:           now.getTime(),
-      label:        c.l,
-      cat:          c.l,
-      ic:           c.ic,
+      label:        type === 'expense' ? c.l : (note.trim() || 'รับเข้า'),
+      cat:          type === 'expense' ? c.l : 'รับเข้า',
+      ic:           type === 'expense' ? c.ic : '💰',
       amt:          type === 'expense' ? -n : n,
       time:         now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
       mode,
@@ -98,155 +98,160 @@ export function FamilyEntryScreen({ addFamilyTxn, close }) {
     : null
 
   return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: '#F0E8D2', overflow: 'auto' }}>
-      <div style={{ height: 'calc(16px + var(--sat))' }} />
+    <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: '#F0E8D2', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-      {/* Header */}
-      <div style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <button onClick={close} style={{ background: 'transparent', border: 'none', fontSize: 26, color: FA, cursor: 'pointer', padding: 4 }}>×</button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, fontWeight: 700, fontFamily: DISPLAY }}>
-          🌳 กองกลางครอบครัว
-        </div>
-        <div style={{ width: 34 }} />
-      </div>
+      {/* ── Scrollable content ── */}
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+        <div style={{ height: 'calc(12px + var(--sat))' }} />
 
-      {/* Type pills */}
-      <div style={{ padding: '6px 20px 10px', display: 'flex', gap: 8, justifyContent: 'center' }}>
-        {[
-          { id: 'expense', label: '🍂 จ่ายออก', bg: CC.ember },
-          { id: 'income',  label: '🌻 รับเข้า',  bg: FA     },
-        ].map(tp => (
-          <button key={tp.id} onClick={() => setType(tp.id)}
-            style={{
-              padding: '8px 18px', borderRadius: 100, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: FONT,
-              background: type === tp.id ? tp.bg    : '#F8F2E4',
-              color:      type === tp.id ? '#fff'   : '#5A3318',
-              border:     type === tp.id ? 'none'   : '1px solid #C8A87A',
-            }}>
-            {tp.label}
-          </button>
-        ))}
-      </div>
+        {/* Header */}
+        <div style={{ padding: '8px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <button onClick={close} style={{ background: 'transparent', border: 'none', fontSize: 26, color: FA, cursor: 'pointer', padding: 4 }}>×</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 700, fontFamily: DISPLAY }}>
+            🌳 กองกลางครอบครัว
+          </div>
+          <div style={{ width: 34 }} />
+        </div>
 
-      {/* Amount display */}
-      <div style={{ padding: '8px 24px 14px', textAlign: 'center' }}>
-        <div style={{ fontSize: 11, color: '#5A3318', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 600 }}>
-          {type === 'expense' ? 'จ่ายไป' : 'รับมา'}
+        {/* Type pills */}
+        <div style={{ padding: '4px 20px 8px', display: 'flex', gap: 8, justifyContent: 'center' }}>
+          {[
+            { id: 'expense', label: '🍂 จ่ายออก', bg: CC.ember },
+            { id: 'income',  label: '💰 รับเข้า',  bg: FA     },
+          ].map(tp => (
+            <button key={tp.id} onClick={() => setType(tp.id)}
+              style={{
+                padding: '7px 18px', borderRadius: 100, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: FONT,
+                background: type === tp.id ? tp.bg    : '#F8F2E4',
+                color:      type === tp.id ? '#fff'   : '#5A3318',
+                border:     type === tp.id ? 'none'   : '1px solid #C8A87A',
+              }}>
+              {tp.label}
+            </button>
+          ))}
         </div>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 4, marginTop: 6 }}>
-          <span style={{ fontSize: 22, color: FA, fontFamily: DISPLAY }}>฿</span>
-          <span style={{ fontSize: 56, fontWeight: 700, letterSpacing: -2, fontVariantNumeric: 'tabular-nums', fontFamily: DISPLAY, color: type === 'expense' ? CC.ink : FA }}>
-            {amount}
-          </span>
-        </div>
-        <div style={{ marginTop: 4, fontSize: 11, color: '#5A3318', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 10px', background: '#F0DEB8', borderRadius: 100 }}>
-          🏡 กองกลางครอบครัว
-        </div>
-      </div>
 
-      {/* Category grid */}
-      <div style={{ padding: '0 18px 12px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
-          {FAMILY_CATS.map(c => {
-            const on = c.id === cat
-            return (
-              <button key={c.id} onClick={() => setCat(c.id)}
-                style={{
-                  aspectRatio: '1', borderRadius: 14, cursor: 'pointer', padding: 0,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
-                  background: on ? FA      : '#F8F2E4',
-                  color:      on ? '#fff'  : CC.ink,
-                  border:     on ? 'none'  : '1px solid #C8A87A',
-                  fontFamily: FONT,
-                }}>
-                <span style={{ fontSize: 18 }}>{c.ic}</span>
-                <span style={{ fontSize: 9, fontWeight: 500 }}>{c.l}</span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Payment mode (expense only) */}
-      {type === 'expense' && (
-        <div style={{ padding: '0 18px 12px' }}>
-          <div style={{ fontSize: 11, color: '#5A3318', letterSpacing: 0.6, textTransform: 'uppercase', fontWeight: 600, marginBottom: 8 }}>ประเภทการจ่าย</div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {MODES.map(m => {
-              const on = m.id === mode
-              return (
-                <button key={m.id} onClick={() => handleModeSelect(m.id)}
-                  style={{
-                    padding: '8px 12px', borderRadius: 100, fontSize: 12, fontWeight: 600,
-                    cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 4,
-                    background: on ? FA       : '#F8F2E4',
-                    color:      on ? '#fff'   : '#5A3318',
-                    border:     on ? 'none'   : '1px solid #C8A87A',
-                  }}>
-                  <span>{m.ic}</span>
-                  {m.l}
-                  {m.id === 'schedule' && scheduleDateLabel && on && (
-                    <span style={{ opacity: 0.8, fontWeight: 500 }}>· {scheduleDateLabel}</span>
-                  )}
-                </button>
-              )
-            })}
+        {/* Amount display */}
+        <div style={{ padding: '4px 24px 10px', textAlign: 'center' }}>
+          <div style={{ fontSize: 11, color: '#5A3318', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 600 }}>
+            {type === 'expense' ? 'จ่ายไป' : 'รับมา'}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 4, marginTop: 4 }}>
+            <span style={{ fontSize: 20, color: FA, fontFamily: DISPLAY }}>฿</span>
+            <span style={{ fontSize: 48, fontWeight: 700, letterSpacing: -2, fontVariantNumeric: 'tabular-nums', fontFamily: DISPLAY, color: type === 'expense' ? CC.ink : FA }}>
+              {amount}
+            </span>
+          </div>
+          <div style={{ marginTop: 4, fontSize: 11, color: '#5A3318', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 10px', background: '#F0DEB8', borderRadius: 100 }}>
+            🏡 กองกลางครอบครัว
           </div>
         </div>
-      )}
 
-      {/* Note input */}
-      <div style={{ padding: '0 18px 10px' }}>
-        <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="📝 เพิ่มรายละเอียด / note..."
-          style={{ width: '100%', padding: '10px 14px', borderRadius: 14, border: '1px solid #C8A87A', background: '#F8F2E4', fontSize: 13, fontFamily: FONT, color: CC.ink, boxSizing: 'border-box', outline: 'none' }} />
-      </div>
-
-      {/* Receipt upload */}
-      <div style={{ padding: '0 18px 14px' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 14, border: '1.5px dashed #C8A87A', background: '#F8F2E4', cursor: 'pointer', fontSize: 13, color: '#5A3318', fontFamily: FONT }}>
-          <span style={{ fontSize: 20 }}>🧾</span>
-          <span>{receipt ? receipt.name : 'แนบใบเสร็จ / อัปโหลดรูปภาพ'}</span>
-          {receipt && (
-            <button onClick={e => { e.preventDefault(); setReceipt(null) }}
-              style={{ marginLeft: 'auto', background: 'none', border: 'none', color: CC.ember, fontSize: 16, cursor: 'pointer', padding: 0 }}>×</button>
-          )}
-          <input ref={fileRef} type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
-        </label>
-        {receipt && (
-          <div style={{ marginTop: 8, borderRadius: 12, overflow: 'hidden', maxHeight: 140 }}>
-            <img src={receipt.url} alt="ใบเสร็จ" style={{ width: '100%', objectFit: 'cover', display: 'block' }} />
+        {/* Category grid — expense only */}
+        {type === 'expense' && (
+          <div style={{ padding: '0 18px 10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 5 }}>
+              {FAMILY_CATS.map(c => {
+                const on = c.id === cat
+                return (
+                  <button key={c.id} onClick={() => setCat(c.id)}
+                    style={{
+                      aspectRatio: '1', borderRadius: 12, cursor: 'pointer', padding: 0,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
+                      background: on ? FA      : '#F8F2E4',
+                      color:      on ? '#fff'  : CC.ink,
+                      border:     on ? 'none'  : '1px solid #C8A87A',
+                      fontFamily: FONT,
+                    }}>
+                    <span style={{ fontSize: 16 }}>{c.ic}</span>
+                    <span style={{ fontSize: 8, fontWeight: 500 }}>{c.l}</span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
         )}
-      </div>
 
-      {/* Numpad */}
-      <div style={{ padding: '0 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {[['1','2','3'],['4','5','6'],['7','8','9'],['.','0','⌫']].map((row, i) => (
-          <div key={i} style={{ display: 'flex', gap: 6 }}>
-            {row.map(k => (
-              <button key={k} onClick={() => press(k)}
-                style={{ flex: 1, height: 52, background: '#F8F2E4', border: '1px solid #C8A87A', borderRadius: 18, fontSize: 24, fontWeight: 600, color: CC.ink, fontFamily: DISPLAY, cursor: 'pointer' }}>
-                {k}
-              </button>
-            ))}
+        {/* Payment mode — expense only */}
+        {type === 'expense' && (
+          <div style={{ padding: '0 18px 10px' }}>
+            <div style={{ fontSize: 10, color: '#5A3318', letterSpacing: 0.6, textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>ประเภทการจ่าย</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {MODES.map(m => {
+                const on = m.id === mode
+                return (
+                  <button key={m.id} onClick={() => handleModeSelect(m.id)}
+                    style={{
+                      padding: '7px 12px', borderRadius: 100, fontSize: 11, fontWeight: 600,
+                      cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 4,
+                      background: on ? FA       : '#F8F2E4',
+                      color:      on ? '#fff'   : '#5A3318',
+                      border:     on ? 'none'   : '1px solid #C8A87A',
+                    }}>
+                    <span>{m.ic}</span>
+                    {m.l}
+                    {m.id === 'schedule' && scheduleDateLabel && on && (
+                      <span style={{ opacity: 0.8, fontWeight: 500 }}>· {scheduleDateLabel}</span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
           </div>
-        ))}
+        )}
 
-        <button onClick={submit} disabled={disabled}
-          style={{
-            height: 54, borderRadius: 18, border: 'none',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            fontSize: 16, fontWeight: 700, fontFamily: DISPLAY, marginTop: 2, cursor: disabled ? 'default' : 'pointer',
-            background: disabled ? CC.ink3 : FA,
-            color: '#fff',
-            boxShadow: disabled ? 'none' : '0 6px 18px rgba(200,146,10,0.4)',
-            transition: 'all 0.2s',
-          }}>
-          <HouseIcon size={20} color={FA_SOFT} /> บันทึกกองกลาง
-        </button>
+        {/* Note input */}
+        <div style={{ padding: '0 18px 8px' }}>
+          <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="📝 รายละเอียด..."
+            style={{ width: '100%', padding: '10px 14px', borderRadius: 14, border: '1px solid #C8A87A', background: '#F8F2E4', fontSize: 13, fontFamily: FONT, color: CC.ink, boxSizing: 'border-box', outline: 'none' }} />
+        </div>
+
+        {/* Receipt upload */}
+        <div style={{ padding: '0 18px 8px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 12, border: '1.5px dashed #C8A87A', background: '#F8F2E4', cursor: 'pointer', fontSize: 12, color: '#5A3318', fontFamily: FONT }}>
+            <span style={{ fontSize: 16 }}>🧾</span>
+            <span>{receipt ? receipt.name : 'แนบใบเสร็จ'}</span>
+            {receipt && (
+              <button onClick={e => { e.preventDefault(); setReceipt(null) }}
+                style={{ marginLeft: 'auto', background: 'none', border: 'none', color: CC.ember, fontSize: 14, cursor: 'pointer', padding: 0 }}>×</button>
+            )}
+            <input ref={fileRef} type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
+          </label>
+          {receipt && (
+            <div style={{ marginTop: 6, borderRadius: 10, overflow: 'hidden', maxHeight: 100 }}>
+              <img src={receipt.url} alt="ใบเสร็จ" style={{ width: '100%', objectFit: 'cover', display: 'block' }} />
+            </div>
+          )}
+        </div>
       </div>
 
-      <div style={{ height: 30 }} />
+      {/* ── Numpad (fixed bottom) ── */}
+      <div style={{ flexShrink: 0, padding: '6px 12px 20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          {[['1','2','3'],['4','5','6'],['7','8','9'],['.','0','⌫']].map((row, i) => (
+            <div key={i} style={{ display: 'flex', gap: 5 }}>
+              {row.map(k => (
+                <button key={k} onClick={() => press(k)}
+                  style={{ flex: 1, height: 48, background: '#F8F2E4', border: '1px solid #C8A87A', borderRadius: 16, fontSize: 22, fontWeight: 600, color: CC.ink, fontFamily: DISPLAY, cursor: 'pointer' }}>
+                  {k}
+                </button>
+              ))}
+            </div>
+          ))}
+
+          <button onClick={submit} disabled={disabled}
+            style={{
+              height: 50, borderRadius: 16, border: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              fontSize: 15, fontWeight: 700, fontFamily: DISPLAY, cursor: disabled ? 'default' : 'pointer',
+              background: disabled ? CC.border : FA,
+              color: '#fff',
+              boxShadow: disabled ? 'none' : '0 4px 14px rgba(122,79,42,0.35)',
+            }}>
+            <HouseIcon size={18} color={FA_SOFT} /> บันทึกกองกลาง
+          </button>
+        </div>
+      </div>
 
       {/* Calendar Popup */}
       {showCalendar && (
