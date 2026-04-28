@@ -119,6 +119,20 @@ export const storage = {
     await batch.commit()
   },
 
+  async resetAll(uid) {
+    const [txnSnap, walletSnap, fixedSnap] = await Promise.all([
+      getDocs(txnCol(uid)),
+      getDocs(walletCol(uid)),
+      getDocs(fixedCol(uid)),
+    ])
+    const batch = writeBatch(db)
+    txnSnap.docs.forEach(d => batch.delete(d.ref))
+    walletSnap.docs.forEach(d => batch.delete(d.ref))
+    fixedSnap.docs.forEach(d => batch.delete(d.ref))
+    batch.delete(doc(db, 'users', uid, 'settings', 'prefs'))
+    await batch.commit()
+  },
+
   subscribeSettings(uid, callback) {
     return onSnapshot(doc(db, 'users', uid, 'settings', 'prefs'), snap => {
       callback(snap.exists() ? snap.data() : {})

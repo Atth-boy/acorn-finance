@@ -1,4 +1,5 @@
-import { CC, DISPLAY } from '../tokens'
+import { useState } from 'react'
+import { CC, DISPLAY, FONT } from '../tokens'
 import { Squirrel } from '../components/Squirrel'
 
 const ROWS = [
@@ -10,9 +11,17 @@ const ROWS = [
   { ic: '💱', l: 'สกุลเงิน',              sub: 'บาท (THB) เท่านั้น',     tone: CC.moss   },
 ]
 
-export function SettingsScreen({ txns, user, onSignOut, onReset }) {
-  const displayName = user?.displayName || 'คุณ'
-  const photoURL    = user?.photoURL
+export function SettingsScreen({ txns, user, onSignOut, onReset, onResetAll }) {
+  const displayName  = user?.displayName || 'คุณ'
+  const photoURL     = user?.photoURL
+  const [confirming, setConfirming] = useState(false)
+  const [clearing,   setClearing]   = useState(false)
+
+  const handleResetAll = async () => {
+    if (!confirming) { setConfirming(true); setTimeout(() => setConfirming(false), 3000); return }
+    setClearing(true)
+    await onResetAll()
+  }
 
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'auto', paddingBottom: 110 }}>
@@ -68,16 +77,30 @@ export function SettingsScreen({ txns, user, onSignOut, onReset }) {
           style={{
             width: '100%', padding: '14px 0', background: 'transparent',
             border: `1px dashed ${CC.ember}`, borderRadius: 16,
-            color: CC.ember, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            color: CC.ember, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: FONT,
           }}
-        >🔄 รีเซ็ตข้อมูลตัวอย่าง</button>
+        >🔄 รีเซ็ตรายการตัวอย่าง</button>
+
+        <button
+          onClick={handleResetAll}
+          disabled={clearing}
+          style={{
+            width: '100%', padding: '14px 0', borderRadius: 16, fontFamily: FONT,
+            border: 'none', fontSize: 13, fontWeight: 700, cursor: clearing ? 'default' : 'pointer',
+            background: confirming ? CC.ember : CC.emberSoft,
+            color: confirming ? '#fff' : CC.ember,
+            transition: 'all 0.2s',
+          }}
+        >
+          {clearing ? '⏳ กำลังล้าง...' : confirming ? '⚠️ กดอีกครั้งเพื่อยืนยัน' : '🗑️ ล้างข้อมูลทั้งหมด'}
+        </button>
 
         <button
           onClick={onSignOut}
           style={{
             width: '100%', padding: '14px 0', background: 'transparent',
             border: `1px solid ${CC.border}`, borderRadius: 16,
-            color: CC.ink2, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            color: CC.ink2, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: FONT,
           }}
         >🚪 ออกจากระบบ</button>
       </div>

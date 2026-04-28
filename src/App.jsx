@@ -189,6 +189,10 @@ export default function App() {
             user={user}
             onSignOut={() => signOut(auth)}
             onReset={() => storage.reset(user.uid)}
+            onResetAll={async () => {
+              await storage.resetAll(user.uid)
+              window.location.reload()
+            }}
           />
         )}
 
