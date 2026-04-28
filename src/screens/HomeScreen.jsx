@@ -1,36 +1,86 @@
-import { CC, DISPLAY, PAPER } from '../tokens'
+import { useState } from 'react'
+import { CC, DISPLAY, FONT } from '../tokens'
 import { Squirrel } from '../components/Squirrel'
 import { Acorn }    from '../components/Acorn'
 import { Leaf }     from '../components/Leaf'
 
-const DAY_BARS = [
-  { h: 35, d: 'จ' }, { h: 60, d: 'อ' }, { h: 28, d: 'พ' },
-  { h: 75, d: 'พฤ' }, { h: 50, d: 'ศ' }, { h: 92, d: 'ส' },
-]
+const DAY_LABELS = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส']
 
-export function HomeScreen({ txns, user }) {
+export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [] }) {
+  const [chartPeriod, setChartPeriod] = useState('week')
+
   const firstName = user?.displayName?.split(' ')[0] || 'คุณ'
-  const today = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long' })
+  const now        = new Date()
+  const todayStr   = now.toLocaleDateString('th-TH', { day: 'numeric', month: 'long' })
+  const todayDate  = now.toDateString()
+  const curMonth   = now.getMonth()
+  const curYear    = now.getFullYear()
 
-  const totalIn  = txns.filter(t => t.amt > 0).reduce((s, t) => s + t.amt, 0)
-  const totalOut = txns.filter(t => t.amt < 0).reduce((s, t) => s + Math.abs(t.amt), 0)
-  const balance  = totalIn - totalOut + 12000
-  const recent   = [...txns].reverse().slice(0, 4)
+  const txnDate = (t) => new Date(t.id || Date.now())
 
-  const todayBar = Math.min(95, 22 + txns.filter(t => t.amt < 0).length * 8)
-  const bars = [...DAY_BARS, { h: todayBar, d: 'อา' }]
+  // Monthly txns for stats (reset each month)
+  const monthlyTxns = txns.filter(t => {
+    const d = txnDate(t)
+    return d.getMonth() === curMonth && d.getFullYear() === curYear
+  })
+
+  // Today txns for "วันนี้" section (reset each day)
+  const todayTxns = txns.filter(t => txnDate(t).toDateString() === todayDate)
+
+  const totalIn  = monthlyTxns.filter(t => t.amt > 0).reduce((s, t) => s + t.amt, 0)
+  const totalOut = monthlyTxns.filter(t => t.amt < 0).reduce((s, t) => s + Math.abs(t.amt), 0)
+  const defaultWallet = wallets.find(w => w.isDefault)
+  const balance  = (defaultWallet?.amt ?? 0) + totalIn - totalOut
+  const recent   = [...todayTxns].reverse().slice(0, 10)
+
+  const todayDay    = now.getDate()
+  const billsDueNow = fixedExpenses.filter(fe => fe.cutDay === todayDay)
+
+  // Last-7-days chart bars
+  const weekBars = (() => {
+    const result = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now)
+      d.setDate(d.getDate() - i)
+      const dayOut = txns
+        .filter(t => txnDate(t).toDateString() === d.toDateString() && t.amt < 0)
+        .reduce((s, t) => s + Math.abs(t.amt), 0)
+      result.push({ raw: dayOut, d: DAY_LABELS[d.getDay()], isToday: i === 0 })
+    }
+    const max = Math.max(...result.map(b => b.raw), 1)
+    return result.map(b => ({ ...b, h: Math.round((b.raw / max) * 85) + 5 }))
+  })()
+
+  // 4-week monthly chart bars
+  const monthBars = (() => {
+    const WEEK_LABELS = ['สป.1', 'สป.2', 'สป.3', 'สป.4']
+    const curWeek = Math.floor((now.getDate() - 1) / 7)
+    const result = WEEK_LABELS.map((l, wi) => {
+      const weekOut = monthlyTxns
+        .filter(t => {
+          const day = txnDate(t).getDate()
+          return day > wi * 7 && day <= (wi + 1) * 7 && t.amt < 0
+        })
+        .reduce((s, t) => s + Math.abs(t.amt), 0)
+      return { raw: weekOut, d: l, isToday: wi === curWeek }
+    })
+    const max = Math.max(...result.map(b => b.raw), 1)
+    return result.map(b => ({ ...b, h: Math.round((b.raw / max) * 85) + 5 }))
+  })()
+
+  const bars     = chartPeriod === 'week' ? weekBars : monthBars
+  const avgLabel = chartPeriod === 'week'
+    ? `เฉลี่ย ฿${Math.round(totalOut / 7).toLocaleString('th-TH')}/วัน`
+    : `฿${totalOut.toLocaleString('th-TH')}/เดือน`
 
   return (
-    <div style={{
-      position: 'absolute', inset: 0,
-      overflow: 'auto', paddingBottom: 110,
-    }}>
+    <div style={{ position: 'absolute', inset: 0, overflow: 'auto', paddingBottom: 110 }}>
       <div style={{ height: 'calc(16px + var(--sat))' }} />
 
       {/* Header */}
       <div style={{ padding: '12px 24px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <div style={{ fontSize: 13, color: CC.walnut, fontStyle: 'italic' }}>วันที่ {today}</div>
+          <div style={{ fontSize: 13, color: CC.walnut, fontStyle: 'italic' }}>วันที่ {todayStr}</div>
           <div style={{ fontSize: 26, fontWeight: 700, fontFamily: DISPLAY, marginTop: 2, letterSpacing: -0.3 }}>
             สวัสดี, {firstName}
           </div>
@@ -69,7 +119,7 @@ export function HomeScreen({ txns, user }) {
         </div>
       </div>
 
-      {/* Stats row */}
+      {/* Monthly stats row */}
       <div style={{ padding: '16px 20px 0', display: 'flex', gap: 12 }}>
         <div style={{ flex: 1, background: CC.surface, borderRadius: 18, border: `1px solid ${CC.border}`, padding: '14px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -79,6 +129,7 @@ export function HomeScreen({ txns, user }) {
           <div style={{ fontSize: 19, fontWeight: 700, fontFamily: DISPLAY, color: CC.moss, marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
             ฿{totalIn.toLocaleString('th-TH')}
           </div>
+          <div style={{ fontSize: 10, color: CC.walnut, marginTop: 2, fontStyle: 'italic' }}>เดือนนี้</div>
         </div>
         <div style={{ flex: 1, background: CC.surface, borderRadius: 18, border: `1px solid ${CC.border}`, padding: '14px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -88,25 +139,61 @@ export function HomeScreen({ txns, user }) {
           <div style={{ fontSize: 19, fontWeight: 700, fontFamily: DISPLAY, color: CC.ember, marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
             ฿{totalOut.toLocaleString('th-TH')}
           </div>
+          <div style={{ fontSize: 10, color: CC.walnut, marginTop: 2, fontStyle: 'italic' }}>เดือนนี้</div>
         </div>
       </div>
 
-      {/* Mini chart */}
+      {/* Bills due today */}
+      {billsDueNow.length > 0 && (
+        <div style={{ padding: '16px 20px 0' }}>
+          <div style={{ background: CC.emberSoft, borderRadius: 20, border: `1.5px solid ${CC.ember}`, padding: '12px 16px' }}>
+            <div style={{ fontSize: 11, color: CC.ember, fontWeight: 700, letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 8 }}>
+              🔔 บิลตัดวันนี้
+            </div>
+            {billsDueNow.map((fe, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: i > 0 ? 8 : 0 }}>
+                <span style={{ fontSize: 18 }}>{fe.ic}</span>
+                <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{fe.name}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', color: CC.ember }}>
+                  ฿{fe.amt.toLocaleString('th-TH')}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Chart with week/month toggle */}
       <div style={{ padding: '20px 20px 0' }}>
         <div style={{ background: CC.surface, borderRadius: 24, border: `1px solid ${CC.border}`, padding: 18 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, fontFamily: DISPLAY }}>สัปดาห์ที่ผ่านมา</div>
-            <div style={{ fontSize: 11, color: CC.walnut }}>
-              เฉลี่ย ฿{Math.round(totalOut / 7).toLocaleString('th-TH')}/วัน
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, fontFamily: DISPLAY }}>
+              {chartPeriod === 'week' ? 'สัปดาห์ที่ผ่านมา' : 'รายสัปดาห์เดือนนี้'}
+            </div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {['week', 'month'].map(p => (
+                <button
+                  key={p}
+                  onClick={() => setChartPeriod(p)}
+                  style={{
+                    padding: '4px 10px', borderRadius: 100, fontSize: 11, fontWeight: 600,
+                    cursor: 'pointer', border: 'none', fontFamily: FONT,
+                    background: chartPeriod === p ? CC.walnut : CC.bg,
+                    color:      chartPeriod === p ? '#fff'    : CC.walnut,
+                    transition: 'all 0.15s',
+                  }}
+                >{p === 'week' ? 'สัปดาห์' : 'เดือน'}</button>
+              ))}
             </div>
           </div>
+          <div style={{ fontSize: 11, color: CC.walnut, marginBottom: 12 }}>{avgLabel}</div>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 70 }}>
             {bars.map((b, i) => (
               <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                 <div style={{ width: '100%', height: 60, display: 'flex', alignItems: 'flex-end' }}>
                   <div style={{
                     width: '100%', height: `${b.h}%`,
-                    background: i === bars.length - 1 ? CC.amber : CC.walnutSoft,
+                    background: b.isToday ? CC.amber : CC.walnutSoft,
                     borderRadius: '6px 6px 2px 2px',
                     transition: 'height 0.5s',
                   }} />
@@ -118,11 +205,11 @@ export function HomeScreen({ txns, user }) {
         </div>
       </div>
 
-      {/* Recent transactions */}
+      {/* Today's transactions (reset daily) */}
       <div style={{ padding: '20px 20px 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ fontSize: 16, fontWeight: 700, fontFamily: DISPLAY }}>วันนี้</div>
-          <div style={{ fontSize: 12, color: CC.walnut }}>{txns.length} รายการ</div>
+          <div style={{ fontSize: 12, color: CC.walnut }}>{todayTxns.length} รายการ</div>
         </div>
         <div style={{ background: CC.surface, borderRadius: 24, border: `1px solid ${CC.border}` }}>
           {recent.length === 0 ? (
@@ -144,7 +231,10 @@ export function HomeScreen({ txns, user }) {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 600 }}>{t.label}</div>
-                <div style={{ fontSize: 12, color: CC.walnut, marginTop: 2 }}>{t.cat} · {t.time}</div>
+                <div style={{ fontSize: 12, color: CC.walnut, marginTop: 2 }}>
+                  {t.cat} · {t.time}
+                  {t.note ? ` · ${t.note}` : ''}
+                </div>
               </div>
               <div style={{
                 fontSize: 15, fontWeight: 700, fontFamily: DISPLAY,

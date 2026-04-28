@@ -15,7 +15,7 @@ export const CC = {
   emberSoft:  '#E8C4B8',
 }
 
-export const FONT = '"IBM Plex Sans Thai", "Sukhumvit Set", -apple-system, system-ui, sans-serif'
-export const DISPLAY = '"IBM Plex Serif", Georgia, serif'
+export const FONT = '"Kanit", sans-serif'
+export const DISPLAY = '"Kanit", sans-serif'
 
 export const PAPER = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='3'/><feColorMatrix values='0 0 0 0 0.55  0 0 0 0 0.42  0 0 0 0 0.25  0 0 0 0.07 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")`
