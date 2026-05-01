@@ -28,8 +28,9 @@ export function SettingsScreen({ txns, user, onSignOut, onReset, onResetAll, roo
   const [changingPwd, setChangingPwd] = useState(false)
 
   // Danger zone
-  const [confirming, setConfirming] = useState(false)
-  const [clearing,   setClearing]   = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteInput,       setDeleteInput]       = useState('')
+  const [clearing,          setClearing]          = useState(false)
 
   const displayName      = user?.displayName || 'คุณ'
   const username         = user?.email?.replace('@acorn.app', '') || ''
@@ -99,7 +100,7 @@ export function SettingsScreen({ txns, user, onSignOut, onReset, onResetAll, roo
   }
 
   const handleResetAll = async () => {
-    if (!confirming) { setConfirming(true); setTimeout(() => setConfirming(false), 3000); return }
+    if (deleteInput.toLowerCase() !== 'delete') return
     setClearing(true)
     await onResetAll()
   }
@@ -211,11 +212,9 @@ export function SettingsScreen({ txns, user, onSignOut, onReset, onResetAll, roo
 
       {/* ── Danger zone ── */}
       <div style={{ padding: '16px 20px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <button onClick={onReset} style={{ width: '100%', padding: '14px 0', background: 'transparent', border: `1px dashed ${CC.ember}`, borderRadius: 16, color: CC.ember, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>
-          🔄 รีเซ็ตรายการตัวอย่าง
-        </button>
-        <button onClick={handleResetAll} disabled={clearing} style={{ width: '100%', padding: '14px 0', borderRadius: 16, fontFamily: FONT, border: 'none', fontSize: 13, fontWeight: 700, cursor: clearing ? 'default' : 'pointer', background: confirming ? CC.ember : CC.emberSoft, color: confirming ? '#fff' : CC.ember, transition: 'all 0.2s' }}>
-          {clearing ? '⏳ กำลังล้าง...' : confirming ? '⚠️ กดอีกครั้งเพื่อยืนยัน' : '🗑️ ล้างข้อมูลทั้งหมด'}
+        <button onClick={() => { setShowDeleteConfirm(true); setDeleteInput('') }}
+          style={{ width: '100%', padding: '14px 0', borderRadius: 16, fontFamily: FONT, border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer', background: CC.emberSoft, color: CC.ember }}>
+          🗑️ ล้างข้อมูลทั้งหมด
         </button>
         <button onClick={onSignOut} style={{ width: '100%', padding: '14px 0', background: 'transparent', border: `1px solid ${CC.border}`, borderRadius: 16, color: CC.ink2, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>
           🚪 ออกจากระบบ
@@ -223,6 +222,35 @@ export function SettingsScreen({ txns, user, onSignOut, onReset, onResetAll, roo
       </div>
 
       <div style={{ height: 40 }} />
+
+      {/* Modal — ยืนยันล้างข้อมูล */}
+      {showDeleteConfirm && (
+        <div style={overlay} onClick={() => setShowDeleteConfirm(false)}>
+          <div style={sheet} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 32, textAlign: 'center', marginBottom: 8 }}>⚠️</div>
+            <div style={{ fontSize: 17, fontWeight: 700, fontFamily: DISPLAY, textAlign: 'center', marginBottom: 8 }}>ล้างข้อมูลทั้งหมด</div>
+            <div style={{ fontSize: 13, color: CC.walnut, textAlign: 'center', lineHeight: 1.7, marginBottom: 16 }}>
+              ข้อมูลทุกอย่างจะถูกลบถาวร{'\n'}พิมพ์ <b style={{ color: CC.ember }}>delete</b> เพื่อยืนยัน
+            </div>
+            <input
+              type="text"
+              value={deleteInput}
+              onChange={e => setDeleteInput(e.target.value)}
+              placeholder="พิมพ์ delete"
+              autoFocus
+              style={{ ...inp, textAlign: 'center', fontSize: 16, letterSpacing: 2, marginBottom: 4,
+                border: `1.5px solid ${deleteInput.toLowerCase() === 'delete' ? CC.ember : CC.border}` }}
+            />
+            <button
+              onClick={handleResetAll}
+              disabled={clearing || deleteInput.toLowerCase() !== 'delete'}
+              style={{ ...btnPri, background: CC.ember, opacity: (clearing || deleteInput.toLowerCase() !== 'delete') ? 0.4 : 1, marginTop: 12 }}>
+              {clearing ? '⏳ กำลังล้าง...' : '🗑️ ลบทั้งหมด'}
+            </button>
+            <button onClick={() => setShowDeleteConfirm(false)} style={btnGhost}>ยกเลิก</button>
+          </div>
+        </div>
+      )}
 
       {/* Modal — แก้ชื่อ */}
       {editingName && (
