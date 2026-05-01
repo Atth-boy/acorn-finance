@@ -117,7 +117,12 @@ export default function App() {
   }
 
   const addTxn = async (txn) => {
-    await storage.add(user.uid, txn)
+    let finalTxn = txn
+    if (txn.receiptImg?.startsWith('data:')) {
+      const { url, path } = await storage.uploadReceipt(user.uid, txn.receiptImg, txn.id)
+      finalTxn = { ...txn, receiptImg: url, receiptPath: path }
+    }
+    await storage.add(user.uid, finalTxn)
     // Sync default wallet balance
     const defaultWallet = wallets.find(w => w.isDefault)
     if (defaultWallet) {
@@ -157,7 +162,7 @@ export default function App() {
   const deleteFixed  = (id) => storage.deleteFixed(user.uid, id)
 
   const deleteTxn = async (txn) => {
-    await storage.deleteTxn(user.uid, txn._id)
+    await storage.deleteTxn(user.uid, txn._id, txn.receiptPath)
     const defaultWallet = wallets.find(w => w.isDefault)
     if (defaultWallet) {
       await storage.upsertWallet(user.uid, { ...defaultWallet, amt: defaultWallet.amt - txn.amt })

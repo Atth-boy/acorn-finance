@@ -3,7 +3,8 @@ import {
   query, orderBy, serverTimestamp, writeBatch, doc,
   setDoc, deleteDoc,
 } from 'firebase/firestore'
-import { db } from './firebase'
+import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage'
+import { db, firebaseStorage } from './firebase'
 
 function daysAgo(n) {
   const d = new Date()
@@ -55,7 +56,18 @@ export const storage = {
     await batch.commit()
   },
 
-  async deleteTxn(uid, txnId) {
+  async uploadReceipt(uid, dataUrl, txnId) {
+    const path    = `users/${uid}/receipts/${txnId}`
+    const fileRef = ref(firebaseStorage, path)
+    await uploadString(fileRef, dataUrl, 'data_url')
+    const url = await getDownloadURL(fileRef)
+    return { url, path }
+  },
+
+  async deleteTxn(uid, txnId, receiptPath) {
+    if (receiptPath) {
+      try { await deleteObject(ref(firebaseStorage, receiptPath)) } catch {}
+    }
     await deleteDoc(doc(db, 'users', uid, 'transactions', txnId))
   },
 
