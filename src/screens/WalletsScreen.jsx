@@ -17,7 +17,6 @@ const ROOM_TYPES = [
   { id: 'trip',  l: 'ทริป',        ic: '🏕️' },
   { id: 'event', l: 'งาน/กิจกรรม', ic: '🎉' },
 ]
-const INIT_ROOMS = []
 const FAMILY_MOCK_MEMBERS = [
   { name: 'แม่', bg: '#5A6B3B', amt: 4500, share: 0.36 },
   { name: 'พ่อ', bg: '#7A4F2A', amt: 3800, share: 0.31 },
@@ -135,7 +134,7 @@ function AcornJar({ acorns, w = 110, h = 130 }) {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────
-export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal, onUpsertWallet, onDeleteWallet, onSaveFixed, onDeleteFixed, familyData, familyTxns = [], onCreateFamily, onJoinFamily, onPageChange }) {
+export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal, onUpsertWallet, onDeleteWallet, onSaveFixed, onDeleteFixed, familyData, familyTxns = [], onCreateFamily, onJoinFamily, onPageChange, rooms = [], onRoomsChange }) {
   const scrollRef = useRef(null)
   const [page, setPage] = useState(0)
 
@@ -153,6 +152,7 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
   const [editFName,     setEditFName]     = useState('')
   const [editFAmt,      setEditFAmt]      = useState('')
   const [editFDay,      setEditFDay]      = useState('')
+  const [editFDueDate,  setEditFDueDate]  = useState('')
 
   // Family Pot state
   const [showFamilySetup, setShowFamilySetup] = useState(false)
@@ -171,7 +171,6 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
   }))
 
   // Shared Rooms state
-  const [rooms,          setRooms]          = useState(INIT_ROOMS)
   const [showCreateRoom, setShowCreateRoom] = useState(false)
   const [showJoinRoom,   setShowJoinRoom]   = useState(false)
   const [roomName,       setRoomName]       = useState('')
@@ -243,11 +242,25 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
     setEditWallet(null)
   }
   const handleDeleteWallet = () => { onDeleteWallet(editWallet.id); setEditWallet(null) }
-  const openEditFixed   = (fe) => { setEditFixed(fe); setEditFName(fe.name); setEditFAmt(fe.amt.toString()); setEditFDay(fe.cutDay.toString()) }
+  const openEditFixed   = (fe) => {
+    setEditFixed(fe)
+    setEditFName(fe.name)
+    setEditFAmt(fe.amt.toString())
+    if (fe.type === 'once') {
+      const d = new Date(fe.dueDate)
+      setEditFDueDate(d.toISOString().slice(0, 10))
+    } else {
+      setEditFDay((fe.cutDay ?? 1).toString())
+    }
+  }
   const handleSaveFixed = () => {
     const amt = parseFloat(editFAmt.replace(/,/g, '')) || 0
-    const day = Math.min(31, Math.max(1, parseInt(editFDay, 10) || 1))
-    onSaveFixed({ ...editFixed, name: editFName.trim() || editFixed.name, amt, cutDay: day })
+    if (editFixed.type === 'once') {
+      onSaveFixed({ ...editFixed, name: editFName.trim() || editFixed.name, amt, dueDate: new Date(editFDueDate).toISOString() })
+    } else {
+      const day = Math.min(31, Math.max(1, parseInt(editFDay, 10) || 1))
+      onSaveFixed({ ...editFixed, name: editFName.trim() || editFixed.name, amt, cutDay: day })
+    }
     setEditFixed(null)
   }
   const handleDeleteFixed = () => { onDeleteFixed(editFixed.id); setEditFixed(null) }
@@ -258,7 +271,7 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
     const code = genCode()
     const rt = ROOM_TYPES.find(r => r.id === roomType)
     const newRoom = { id: Date.now().toString(), name: roomName.trim(), type: roomType, ic: rt.ic, code, members: [{ name: 'ฉัน', bg: CC.moss }], balance: 0, txns: [] }
-    setRooms(rs => [...rs, newRoom])
+    onRoomsChange(rs => [...rs, newRoom])
     setRoomName(''); setShowCreateRoom(false); setCreatedCode({ name: newRoom.name, code })
   }
   const handleJoinRoom = () => {
@@ -276,7 +289,7 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
     const amt = parseFloat(entryAmt.replace(/,/g, ''))
     if (!amt || !addEntryRoom) return
     const txn = { label: entryLabel || 'รายการ', amt: -Math.abs(amt), by: entryBy || addEntryRoom.members[0]?.name, ic: '💸' }
-    setRooms(rs => rs.map(r => r.id === addEntryRoom.id ? { ...r, balance: r.balance + txn.amt, txns: [txn, ...r.txns] } : r))
+    onRoomsChange(rs => rs.map(r => r.id === addEntryRoom.id ? { ...r, balance: r.balance + txn.amt, txns: [txn, ...r.txns] } : r))
     if (activeRoom?.id === addEntryRoom.id) setActiveRoom(prev => ({ ...prev, balance: prev.balance + txn.amt, txns: [txn, ...prev.txns] }))
     setEntryLabel(''); setEntryAmt(''); setEntryBy(null); setCustomMemberName(''); setAddEntryRoom(null)
   }
@@ -860,8 +873,17 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
             <input type="text" value={editFName} onChange={e => setEditFName(e.target.value)} autoFocus style={{ ...inp, marginBottom: 12 }} />
             <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>จำนวนเงิน (บาท)</div>
             <input type="number" value={editFAmt} onChange={e => setEditFAmt(e.target.value)} style={{ ...inp, marginBottom: 12, fontVariantNumeric: 'tabular-nums' }} />
-            <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>วันตัด (1–31)</div>
-            <input type="number" min="1" max="31" value={editFDay} onChange={e => setEditFDay(e.target.value)} style={inp} />
+            {editFixed.type === 'once' ? (
+              <>
+                <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>วันที่กำหนดชำระ</div>
+                <input type="date" value={editFDueDate} onChange={e => setEditFDueDate(e.target.value)} style={inp} />
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>วันตัดทุกเดือน (1–31)</div>
+                <input type="number" min="1" max="31" value={editFDay} onChange={e => setEditFDay(e.target.value)} style={inp} />
+              </>
+            )}
             <button onClick={handleSaveFixed} style={btnPri}>บันทึก</button>
             <button onClick={handleDeleteFixed} style={btnDng}>ลบรายการนี้</button>
           </div>

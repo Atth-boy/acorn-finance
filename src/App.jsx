@@ -34,6 +34,7 @@ export default function App() {
 
   // Wallet sub-page (0 = personal, 1 = shared rooms, 2 = family pot)
   const [walletSubPage, setWalletSubPage] = useState(0)
+  const [rooms,         setRooms]         = useState([])
 
   // Family pot — undefined=loading, null=ไม่มี family, object=มี family
   const [familyData,      setFamilyData]      = useState(undefined)
@@ -75,12 +76,22 @@ export default function App() {
         const todayD = new Date(); todayD.setHours(0,0,0,0)
         if (due <= todayD) {
           processedRef.current.add(fe.id)
+          const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+          await storage.add(user.uid, {
+            id: Date.now(), label: fe.name, cat: 'ตั้งเวลา', ic: fe.ic,
+            amt: -fe.amt, time: timeStr, mode: 'schedule', note: null, receiptImg: null,
+          })
           await storage.upsertWallet(user.uid, { ...defaultWallet, amt: defaultWallet.amt - fe.amt })
           await storage.deleteFixed(user.uid, fe.id)
         }
       } else if (type === 'monthly') {
         if (fe.lastDeducted !== ymKey && today >= (fe.cutDay ?? 1)) {
           processedRef.current.add(fe.id)
+          const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+          await storage.add(user.uid, {
+            id: Date.now(), label: fe.name, cat: 'ทุกเดือน', ic: fe.ic,
+            amt: -fe.amt, time: timeStr, mode: 'monthly', note: null, receiptImg: null,
+          })
           await storage.upsertWallet(user.uid, { ...defaultWallet, amt: defaultWallet.amt - fe.amt })
           await storage.upsertFixed(user.uid, { ...fe, lastDeducted: ymKey })
         }
@@ -196,6 +207,17 @@ export default function App() {
     return true
   }
 
+  const handleUserRefresh = () => {
+    if (auth.currentUser) setUser(u => ({ ...u, displayName: auth.currentUser.displayName }))
+  }
+
+  const handleFamilyLeft = () => {
+    familyUnsubRef.current?.()
+    familyUnsubRef.current = null
+    setFamilyData(null)
+    setFamilyTxns([])
+  }
+
   const handleTabChange = (newTab) => {
     if (newTab !== 'wallets') setWalletSubPage(0)
     setTab(newTab)
@@ -239,6 +261,8 @@ export default function App() {
             onCreateFamily={handleCreateFamily}
             onJoinFamily={handleJoinFamily}
             onPageChange={setWalletSubPage}
+            rooms={rooms}
+            onRoomsChange={setRooms}
           />
         )}
         {tab === 'reports'  && <ReportsScreen txns={txns} familyTxns={familyTxns} user={user} />}
@@ -252,6 +276,11 @@ export default function App() {
               await storage.resetAll(user.uid)
               window.location.reload()
             }}
+            rooms={rooms}
+            onRoomsChange={setRooms}
+            familyData={familyData}
+            onLeaveFamily={handleFamilyLeft}
+            onUserRefresh={handleUserRefresh}
           />
         )}
 

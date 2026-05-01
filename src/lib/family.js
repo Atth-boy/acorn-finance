@@ -1,5 +1,5 @@
 import {
-  collection, doc, getDoc, setDoc, updateDoc,
+  collection, doc, getDoc, setDoc, updateDoc, deleteDoc,
   addDoc, onSnapshot, query, orderBy, arrayUnion, serverTimestamp,
 } from 'firebase/firestore'
 import { db } from './firebase'
@@ -58,5 +58,18 @@ export const familyLib = {
 
   async addTxn(code, txn) {
     await addDoc(familyTxns(code), { ...txn, createdAt: serverTimestamp() })
+  },
+
+  async leaveFamily(code, uid) {
+    const snap = await getDoc(familyDoc(code))
+    if (!snap.exists()) return
+    const remaining = (snap.data().members || []).filter(m => m.uid !== uid)
+    await updateDoc(familyDoc(code), { members: remaining })
+    await setDoc(profileDoc(uid), { familyCode: null }, { merge: true })
+  },
+
+  async deleteFamily(code, uid) {
+    await deleteDoc(familyDoc(code))
+    await setDoc(profileDoc(uid), { familyCode: null }, { merge: true })
   },
 }
