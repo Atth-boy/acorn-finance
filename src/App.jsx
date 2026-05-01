@@ -50,7 +50,12 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (!user) return
+    if (!user) {
+      setTxns([]); setWallets([]); setFixedExpenses([])
+      setGoal(750000); setFamilyData(null); setFamilyTxns([]); setRooms([])
+      processedRef.current = new Set()
+      return
+    }
     storage.seedWalletsIfEmpty(user.uid, INIT_WALLETS)
     storage.seedFixedIfEmpty(user.uid, INIT_FIXED)
     const unsubTxns     = storage.subscribe(user.uid, setTxns)
