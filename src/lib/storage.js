@@ -1,7 +1,7 @@
 import {
   collection, addDoc, getDocs, onSnapshot,
   query, orderBy, serverTimestamp, writeBatch, doc,
-  setDoc, deleteDoc,
+  setDoc, deleteDoc, updateDoc, increment,
 } from 'firebase/firestore'
 import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage'
 import { db, firebaseStorage } from './firebase'
@@ -102,6 +102,10 @@ export const storage = {
   async upsertWallet(uid, wallet) {
     const { id, ...rest } = wallet
     await setDoc(walletDoc(uid, id), rest)
+  },
+
+  async incrementWalletAmt(uid, walletId, delta) {
+    await updateDoc(walletDoc(uid, walletId), { amt: increment(delta) })
   },
 
   async deleteWallet(uid, id) {

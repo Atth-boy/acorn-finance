@@ -88,7 +88,7 @@ export default function App() {
             id: new Date(fe.dueDate).getTime(), label: fe.name, cat: 'ตั้งเวลา', ic: fe.ic,
             amt: -fe.amt, time: timeStr, mode: 'schedule', note: null, receiptImg: null,
           })
-          await storage.upsertWallet(user.uid, { ...defaultWallet, amt: defaultWallet.amt - fe.amt })
+          await storage.incrementWalletAmt(user.uid, defaultWallet.id, -fe.amt)
           await storage.deleteFixed(user.uid, fe.id)
         }
       } else if (type === 'monthly') {
@@ -99,7 +99,7 @@ export default function App() {
             id: Date.now(), label: fe.name, cat: 'ทุกเดือน', ic: fe.ic,
             amt: -fe.amt, time: timeStr, mode: 'monthly', note: null, receiptImg: null,
           })
-          await storage.upsertWallet(user.uid, { ...defaultWallet, amt: defaultWallet.amt - fe.amt })
+          await storage.incrementWalletAmt(user.uid, defaultWallet.id, -fe.amt)
           await storage.upsertFixed(user.uid, { ...fe, lastDeducted: ymKey })
         }
       }
@@ -139,12 +139,11 @@ export default function App() {
     // Sync default wallet balance
     const defaultWallet = wallets.find(w => w.isDefault)
     if (defaultWallet) {
-      await storage.upsertWallet(user.uid, { ...defaultWallet, amt: defaultWallet.amt + txn.amt })
+      await storage.incrementWalletAmt(user.uid, defaultWallet.id, txn.amt)
     }
     // Saving mode: also add to target savings wallet
     if (txn.mode === 'saving' && txn.walletId) {
-      const target = wallets.find(w => w.id === txn.walletId)
-      if (target) await storage.upsertWallet(user.uid, { ...target, amt: target.amt + Math.abs(txn.amt) })
+      await storage.incrementWalletAmt(user.uid, txn.walletId, Math.abs(txn.amt))
     }
     setEntryOpen(false)
     showToast('เก็บลงกรุแล้ว! 🌰')
@@ -178,7 +177,7 @@ export default function App() {
     await storage.deleteTxn(user.uid, txn._id, txn.receiptPath)
     const defaultWallet = wallets.find(w => w.isDefault)
     if (defaultWallet) {
-      await storage.upsertWallet(user.uid, { ...defaultWallet, amt: defaultWallet.amt - txn.amt })
+      await storage.incrementWalletAmt(user.uid, defaultWallet.id, -txn.amt)
     }
   }
 
@@ -189,14 +188,11 @@ export default function App() {
       const diff = txn.amt - oldAmt
       const defaultWallet = wallets.find(w => w.isDefault)
       if (defaultWallet) {
-        await storage.upsertWallet(user.uid, { ...defaultWallet, amt: defaultWallet.amt + diff })
+        await storage.incrementWalletAmt(user.uid, defaultWallet.id, diff)
       }
       if (txn.mode === 'saving' && txn.walletId) {
-        const savingsWallet = wallets.find(w => w.id === txn.walletId)
-        if (savingsWallet) {
-          const savingsDiff = Math.abs(txn.amt) - Math.abs(oldAmt)
-          await storage.upsertWallet(user.uid, { ...savingsWallet, amt: savingsWallet.amt + savingsDiff })
-        }
+        const savingsDiff = Math.abs(txn.amt) - Math.abs(oldAmt)
+        await storage.incrementWalletAmt(user.uid, txn.walletId, savingsDiff)
       }
     }
   }
