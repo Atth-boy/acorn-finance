@@ -15,6 +15,7 @@ export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [], onDel
   const [editLabel,    setEditLabel]    = useState('')
   const [editNote,     setEditNote]     = useState('')
   const [saving,       setSaving]       = useState(false)
+  const [editAmt,      setEditAmt]      = useState('')
 
   const firstName = user?.displayName?.split(' ')[0] || 'คุณ'
   const now        = new Date()
@@ -288,7 +289,7 @@ export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [], onDel
                 )}
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button
-                    onClick={() => { setEditLabel(selectedTxn.label); setEditNote(selectedTxn.note || ''); setEditMode(true) }}
+                    onClick={() => { setEditLabel(selectedTxn.label); setEditNote(selectedTxn.note || ''); setEditAmt(Math.abs(selectedTxn.amt).toString()); setEditMode(true) }}
                     style={{ flex: 1, padding: '13px', borderRadius: 16, border: `1px solid ${CC.border}`, background: CC.surface, color: CC.ink, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>
                     ✏️ แก้ไข
                   </button>
@@ -316,6 +317,13 @@ export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [], onDel
                   autoFocus
                   style={{ width: '100%', padding: '12px 14px', borderRadius: 14, border: `1.5px solid ${CC.border}`, background: CC.surface, fontSize: 14, fontFamily: FONT, color: CC.ink, boxSizing: 'border-box', outline: 'none', marginBottom: 12 }}
                 />
+                <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>จำนวนเงิน (บาท)</div>
+                <input
+                  type="number"
+                  value={editAmt}
+                  onChange={e => setEditAmt(e.target.value)}
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: 14, border: `1.5px solid ${CC.border}`, background: CC.surface, fontSize: 14, fontFamily: FONT, color: CC.ink, boxSizing: 'border-box', outline: 'none', marginBottom: 12, fontVariantNumeric: 'tabular-nums' }}
+                />
                 <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>หมายเหตุ</div>
                 <input
                   type="text"
@@ -334,7 +342,9 @@ export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [], onDel
                     onClick={async () => {
                       if (saving) return
                       setSaving(true)
-                      await onEditTxn?.({ ...selectedTxn, label: editLabel.trim() || selectedTxn.label, note: editNote.trim() || null })
+                      const absAmt = parseFloat(editAmt) || Math.abs(selectedTxn.amt)
+                      const newAmt = selectedTxn.amt >= 0 ? absAmt : -absAmt
+                      await onEditTxn?.({ ...selectedTxn, label: editLabel.trim() || selectedTxn.label, note: editNote.trim() || null, amt: newAmt }, selectedTxn.amt)
                       setSaving(false)
                       setSelectedTxn(null)
                       setEditMode(false)

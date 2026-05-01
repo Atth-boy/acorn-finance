@@ -169,9 +169,15 @@ export default function App() {
     }
   }
 
-  const editTxn = async (txn) => {
+  const editTxn = async (txn, oldAmt) => {
     const { _id, ...rest } = txn
     await storage.updateTxn(user.uid, _id, rest)
+    if (oldAmt !== undefined && txn.amt !== oldAmt) {
+      const defaultWallet = wallets.find(w => w.isDefault)
+      if (defaultWallet) {
+        await storage.upsertWallet(user.uid, { ...defaultWallet, amt: defaultWallet.amt + (txn.amt - oldAmt) })
+      }
+    }
   }
 
   const addScheduledFixed = async (item) => {
