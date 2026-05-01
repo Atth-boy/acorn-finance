@@ -8,6 +8,14 @@ import { Leaf }     from '../components/Leaf'
 // ─── Static data ──────────────────────────────────────────────────────────
 const WALLET_TYPES = ['เงินฝากประจำ', 'PVD', 'กองทุน', 'อื่นๆ']
 const MONTH_NAMES  = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
+const FAMILY_CATS  = [
+  { id: 'food',   ic: '🍜', l: 'อาหาร' },
+  { id: 'util',   ic: '💡', l: 'สาธารณูปโภค' },
+  { id: 'home',   ic: '🏠', l: 'บ้าน' },
+  { id: 'health', ic: '💊', l: 'สุขภาพ' },
+  { id: 'shop',   ic: '🛍️', l: 'ซื้อของ' },
+  { id: 'other',  ic: '🎁', l: 'อื่นๆ' },
+]
 
 function daysUntilDate(isoDate) {
   const due = new Date(isoDate); due.setHours(0,0,0,0)
@@ -195,6 +203,7 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
   const [fEditNote,      setFEditNote]      = useState('')
   const [fSaving,        setFSaving]        = useState(false)
   const [fDeleting,      setFDeleting]      = useState(false)
+  const [fEditCat,       setFEditCat]       = useState('other')
 
   useEffect(() => {
     roomTxnUnsubRef.current?.()
@@ -1181,7 +1190,7 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
                 )}
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button
-                    onClick={() => { setFEditLabel(selFamilyTxn.label); setFEditAmt(Math.abs(selFamilyTxn.amt).toString()); setFEditNote(selFamilyTxn.note || ''); setFEditMode(true) }}
+                    onClick={() => { setFEditLabel(selFamilyTxn.label); setFEditAmt(Math.abs(selFamilyTxn.amt).toString()); setFEditNote(selFamilyTxn.note || ''); setFEditCat(FAMILY_CATS.find(c => c.l === selFamilyTxn.cat)?.id || 'other'); setFEditMode(true) }}
                     style={{ flex: 1, padding: '13px', borderRadius: 16, border: `1px solid ${CC.border}`, background: CC.surface, color: CC.ink, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>
                     ✏️ แก้ไข
                   </button>
@@ -1201,6 +1210,27 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
               </>
             ) : (
               <>
+                {selFamilyTxn.amt < 0 && selFamilyTxn.cat !== 'รับเข้า' && (
+                  <>
+                    <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>หมวดหมู่</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 5, marginBottom: 12 }}>
+                      {FAMILY_CATS.map(c => {
+                        const on = c.id === fEditCat
+                        return (
+                          <button key={c.id} onClick={() => setFEditCat(c.id)} style={{
+                            aspectRatio: '1', borderRadius: 10, cursor: 'pointer', padding: 0,
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
+                            background: on ? CC.amber : CC.surface, color: on ? '#fff' : CC.ink,
+                            border: on ? 'none' : `1px solid ${CC.border}`, fontFamily: FONT,
+                          }}>
+                            <span style={{ fontSize: 15 }}>{c.ic}</span>
+                            <span style={{ fontSize: 8, fontWeight: 500 }}>{c.l}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </>
+                )}
                 <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>ชื่อรายการ</div>
                 <input type="text" value={fEditLabel} onChange={e => setFEditLabel(e.target.value)} autoFocus style={{ ...inp, marginBottom: 12 }} />
                 <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>จำนวนเงิน (บาท)</div>
@@ -1216,7 +1246,10 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
                       if (absAmt <= 0) return
                       setFSaving(true)
                       const newAmt = selFamilyTxn.amt >= 0 ? absAmt : -absAmt
-                      await onEditFamilyTxn?.({ ...selFamilyTxn, label: fEditLabel.trim() || selFamilyTxn.label, amt: newAmt, note: fEditNote.trim() || null })
+                      const catObj = FAMILY_CATS.find(c => c.id === fEditCat)
+                      const updCat = (selFamilyTxn.amt < 0 && catObj) ? catObj.l : selFamilyTxn.cat
+                      const updIc  = (selFamilyTxn.amt < 0 && catObj) ? catObj.ic : selFamilyTxn.ic
+                      await onEditFamilyTxn?.({ ...selFamilyTxn, label: fEditLabel.trim() || selFamilyTxn.label, amt: newAmt, note: fEditNote.trim() || null, cat: updCat, ic: updIc })
                       setFSaving(false)
                       setSelFamilyTxn(null)
                       setFEditMode(false)
