@@ -31,7 +31,7 @@ function HouseIcon({ size = 22, color = '#fff' }) {
   )
 }
 
-export function FamilyEntryScreen({ addFamilyTxn, close }) {
+export function FamilyEntryScreen({ addFamilyTxn, close, user }) {
   const [type,         setType]         = useState('expense')
   const [amount,       setAmount]       = useState('0')
   const [cat,          setCat]          = useState('food')
@@ -68,15 +68,16 @@ export function FamilyEntryScreen({ addFamilyTxn, close }) {
     const c   = FAMILY_CATS.find(x => x.id === cat)
     const now = new Date()
     addFamilyTxn({
-      id:           now.getTime(),
-      label:        type === 'expense' ? c.l : (note.trim() || 'รับเข้า'),
-      cat:          type === 'expense' ? c.l : 'รับเข้า',
-      ic:           type === 'expense' ? c.ic : '💰',
-      amt:          type === 'expense' ? -n : n,
-      time:         now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+      id:            now.getTime(),
+      label:         type === 'expense' ? c.l : (note.trim() || 'รับเข้า'),
+      cat:           type === 'expense' ? c.l : 'รับเข้า',
+      ic:            type === 'expense' ? c.ic : '💰',
+      amt:           type === 'expense' ? -n : n,
+      time:          now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
       mode,
-      scheduleDate: scheduleDate ? scheduleDate.toISOString() : null,
-      note:         note.trim() || null,
+      scheduleDate:  scheduleDate ? scheduleDate.toISOString() : null,
+      note:          note.trim() || null,
+      createdByName: user?.displayName || user?.email?.replace('@acorn.app', '') || 'ไม่ทราบ',
     })
   }
 

@@ -60,6 +60,14 @@ export const familyLib = {
     await addDoc(familyTxns(code), { ...txn, createdAt: serverTimestamp() })
   },
 
+  async updateFamilyTxn(code, txnId, updates) {
+    await setDoc(doc(db, 'families', code, 'transactions', txnId), updates, { merge: true })
+  },
+
+  async deleteFamilyTxn(code, txnId) {
+    await deleteDoc(doc(db, 'families', code, 'transactions', txnId))
+  },
+
   async leaveFamily(code, uid) {
     const snap = await getDoc(familyDoc(code))
     if (!snap.exists()) return

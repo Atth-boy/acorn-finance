@@ -214,6 +214,17 @@ export default function App() {
     showToast('บันทึกกองกลางแล้ว! 🏡')
   }
 
+  const editFamilyTxn = async (txn) => {
+    if (!familyData?.code) return
+    const { _id, ...rest } = txn
+    await familyLib.updateFamilyTxn(familyData.code, _id, rest)
+  }
+
+  const deleteFamilyTxn = async (txn) => {
+    if (!familyData?.code) return
+    await familyLib.deleteFamilyTxn(familyData.code, txn._id)
+  }
+
   const handleCreateFamily = async () => {
     const code = Math.random().toString(36).slice(2, 8).toUpperCase()
     const data = await familyLib.createFamily(code, user)
@@ -300,6 +311,8 @@ export default function App() {
             onDeleteFixed={deleteFixed}
             familyData={familyData}
             familyTxns={familyTxns}
+            onEditFamilyTxn={editFamilyTxn}
+            onDeleteFamilyTxn={deleteFamilyTxn}
             onCreateFamily={handleCreateFamily}
             onJoinFamily={handleJoinFamily}
             onPageChange={setWalletSubPage}
@@ -339,7 +352,7 @@ export default function App() {
         )}
 
         {familyEntryOpen && (
-          <FamilyEntryScreen addFamilyTxn={addFamilyTxn} close={() => setFamilyEntryOpen(false)} />
+          <FamilyEntryScreen addFamilyTxn={addFamilyTxn} close={() => setFamilyEntryOpen(false)} user={user} />
         )}
 
         {!entryOpen && !familyEntryOpen && (

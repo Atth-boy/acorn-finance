@@ -135,7 +135,7 @@ function AcornJar({ acorns, w = 110, h = 130 }) {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────
-export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal, onUpsertWallet, onDeleteWallet, onSaveFixed, onDeleteFixed, familyData, familyTxns = [], onCreateFamily, onJoinFamily, onPageChange, rooms = [], onCreateRoom, onJoinRoom, onAddRoomTxn }) {
+export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal, onUpsertWallet, onDeleteWallet, onSaveFixed, onDeleteFixed, familyData, familyTxns = [], onEditFamilyTxn, onDeleteFamilyTxn, onCreateFamily, onJoinFamily, onPageChange, rooms = [], onCreateRoom, onJoinRoom, onAddRoomTxn }) {
   const scrollRef = useRef(null)
   const [page, setPage] = useState(0)
 
@@ -188,6 +188,13 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
   const [showRoomSummary,   setShowRoomSummary]   = useState(false)
   const [activeRoomTxns,    setActiveRoomTxns]    = useState([])
   const roomTxnUnsubRef = useRef(null)
+  const [selFamilyTxn,   setSelFamilyTxn]   = useState(null)
+  const [fEditMode,      setFEditMode]      = useState(false)
+  const [fEditLabel,     setFEditLabel]     = useState('')
+  const [fEditAmt,       setFEditAmt]       = useState('')
+  const [fEditNote,      setFEditNote]      = useState('')
+  const [fSaving,        setFSaving]        = useState(false)
+  const [fDeleting,      setFDeleting]      = useState(false)
 
   useEffect(() => {
     roomTxnUnsubRef.current?.()
@@ -778,16 +785,20 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
                       <div style={{ fontSize: 11, marginTop: 4, opacity: 0.7 }}>กดปุ่มบ้านด้านล่างเพื่อเพิ่ม</div>
                     </div>
                   ) : familyTxns.slice(0, 15).map((t, i) => (
-                    <div key={t._id || i} style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', borderBottom: i < Math.min(familyTxns.length, 15) - 1 ? `1px solid ${CC.border}` : 'none', gap: 10 }}>
+                    <button key={t._id || i}
+                      onClick={() => { setSelFamilyTxn(t); setFEditMode(false) }}
+                      style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', borderBottom: i < Math.min(familyTxns.length, 15) - 1 ? `1px solid ${CC.border}` : 'none', gap: 10, width: '100%', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: FONT }}>
                       <div style={{ width: 38, height: 38, borderRadius: 12, background: t.amt < 0 ? CC.amberSoft : CC.mossSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{t.ic}</div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 600, color: CC.ink }}>{t.label}</div>
-                        <div style={{ fontSize: 11, color: CC.walnut, marginTop: 1 }}>{t.cat} · {t.time}</div>
+                        <div style={{ fontSize: 11, color: CC.walnut, marginTop: 1 }}>
+                          {t.cat} · {t.time}{t.createdByName ? ` · โดย ${t.createdByName}` : ''}
+                        </div>
                       </div>
                       <div style={{ fontSize: 14, fontWeight: 700, fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', color: t.amt < 0 ? CC.ember : CC.moss, flexShrink: 0 }}>
                         {t.amt > 0 ? '+' : '−'}฿{Math.abs(t.amt).toLocaleString('th-TH')}
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -1135,6 +1146,88 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
               style={{ ...btnPri, opacity: joiningFamily || !joinFamilyCode.trim() ? 0.5 : 1 }}>
               {joiningFamily ? 'กำลังเข้าร่วม...' : 'เข้าร่วม'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Family transaction detail sheet */}
+      {selFamilyTxn && (
+        <div style={overlay} onClick={() => { setSelFamilyTxn(null); setFEditMode(false) }}>
+          <div style={{ ...sheet, maxHeight: '85vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+              <button onClick={() => { setSelFamilyTxn(null); setFEditMode(false) }}
+                style={{ background: CC.surface, border: `1px solid ${CC.border}`, borderRadius: 20, width: 32, height: 32, fontSize: 18, color: CC.walnut, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: selFamilyTxn.amt < 0 ? CC.amberSoft : CC.mossSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{selFamilyTxn.ic}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 16, fontWeight: 700, fontFamily: DISPLAY }}>{selFamilyTxn.label}</div>
+                <div style={{ fontSize: 11, color: CC.walnut, marginTop: 2 }}>{selFamilyTxn.cat} · {selFamilyTxn.time}</div>
+                {selFamilyTxn.createdByName && (
+                  <div style={{ fontSize: 11, color: CC.walnut, marginTop: 1 }}>บันทึกโดย {selFamilyTxn.createdByName}</div>
+                )}
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 700, fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', color: selFamilyTxn.amt < 0 ? CC.ember : CC.moss }}>
+                {selFamilyTxn.amt > 0 ? '+' : '−'}฿{Math.abs(selFamilyTxn.amt).toLocaleString('th-TH')}
+              </div>
+            </div>
+
+            {!fEditMode ? (
+              <>
+                {selFamilyTxn.note && (
+                  <div style={{ background: CC.surface, borderRadius: 14, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: CC.ink }}>
+                    📝 {selFamilyTxn.note}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    onClick={() => { setFEditLabel(selFamilyTxn.label); setFEditAmt(Math.abs(selFamilyTxn.amt).toString()); setFEditNote(selFamilyTxn.note || ''); setFEditMode(true) }}
+                    style={{ flex: 1, padding: '13px', borderRadius: 16, border: `1px solid ${CC.border}`, background: CC.surface, color: CC.ink, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>
+                    ✏️ แก้ไข
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (fDeleting) return
+                      setFDeleting(true)
+                      await onDeleteFamilyTxn?.(selFamilyTxn)
+                      setFDeleting(false)
+                      setSelFamilyTxn(null)
+                    }}
+                    disabled={fDeleting}
+                    style={{ flex: 1, padding: '13px', borderRadius: 16, border: 'none', background: CC.emberSoft, color: CC.ember, fontSize: 14, fontWeight: 700, cursor: fDeleting ? 'default' : 'pointer', fontFamily: FONT }}>
+                    {fDeleting ? '⏳ กำลังลบ...' : '🗑️ ลบ'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>ชื่อรายการ</div>
+                <input type="text" value={fEditLabel} onChange={e => setFEditLabel(e.target.value)} autoFocus style={{ ...inp, marginBottom: 12 }} />
+                <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>จำนวนเงิน (บาท)</div>
+                <input type="number" value={fEditAmt} onChange={e => setFEditAmt(e.target.value)} style={{ ...inp, marginBottom: 12, fontVariantNumeric: 'tabular-nums' }} />
+                <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>หมายเหตุ</div>
+                <input type="text" value={fEditNote} onChange={e => setFEditNote(e.target.value)} placeholder="(ไม่มี)" style={{ ...inp, marginBottom: 14 }} />
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button onClick={() => setFEditMode(false)} style={{ flex: 1, padding: '13px', borderRadius: 16, border: `1px solid ${CC.border}`, background: CC.surface, color: CC.walnut, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>ยกเลิก</button>
+                  <button
+                    onClick={async () => {
+                      if (fSaving) return
+                      const absAmt = parseFloat(fEditAmt) || 0
+                      if (absAmt <= 0) return
+                      setFSaving(true)
+                      const newAmt = selFamilyTxn.amt >= 0 ? absAmt : -absAmt
+                      await onEditFamilyTxn?.({ ...selFamilyTxn, label: fEditLabel.trim() || selFamilyTxn.label, amt: newAmt, note: fEditNote.trim() || null })
+                      setFSaving(false)
+                      setSelFamilyTxn(null)
+                      setFEditMode(false)
+                    }}
+                    disabled={fSaving}
+                    style={{ flex: 1, padding: '13px', borderRadius: 16, border: 'none', background: CC.walnut, color: '#fff', fontSize: 14, fontWeight: 700, cursor: fSaving ? 'default' : 'pointer', fontFamily: FONT }}>
+                    {fSaving ? 'กำลังบันทึก...' : '💾 บันทึก'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
