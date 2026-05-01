@@ -83,6 +83,7 @@ export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [], onDel
     : `฿${totalOut.toLocaleString('th-TH')}/เดือน`
 
   return (
+    <div style={{ position: 'absolute', inset: 0 }}>
     <div style={{ position: 'absolute', inset: 0, overflow: 'auto', paddingBottom: 110 }}>
       <div style={{ height: 'calc(16px + var(--sat))' }} />
 
@@ -257,6 +258,7 @@ export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [], onDel
       </div>
 
       <div style={{ height: 40 }} />
+    </div>
 
       {/* Transaction detail sheet */}
       {selectedTxn && (
@@ -369,3 +371,4 @@ export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [], onDel
     </div>
   )
 }
+
