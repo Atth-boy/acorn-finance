@@ -342,7 +342,8 @@ export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [], onDel
                     onClick={async () => {
                       if (saving) return
                       setSaving(true)
-                      const absAmt = parseFloat(editAmt) || Math.abs(selectedTxn.amt)
+                      const absAmt = parseFloat(editAmt) || 0
+                      if (absAmt <= 0) { setSaving(false); return }
                       const newAmt = selectedTxn.amt >= 0 ? absAmt : -absAmt
                       await onEditTxn?.({ ...selectedTxn, label: editLabel.trim() || selectedTxn.label, note: editNote.trim() || null, amt: newAmt }, selectedTxn.amt)
                       setSaving(false)

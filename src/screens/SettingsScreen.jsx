@@ -41,10 +41,14 @@ export function SettingsScreen({ txns, user, onSignOut, onReset, onResetAll, roo
   const handleSaveName = async () => {
     if (!newName.trim() || savingName) return
     setSavingName(true)
-    await updateProfile(auth.currentUser, { displayName: newName.trim() }).catch(() => {})
-    onUserRefresh()
+    try {
+      await updateProfile(auth.currentUser, { displayName: newName.trim() })
+      onUserRefresh()
+      setEditingName(false)
+    } catch {
+      alert('เกิดข้อผิดพลาด กรุณาลองใหม่')
+    }
     setSavingName(false)
-    setEditingName(false)
   }
 
   const handleLeaveRoom = (room) => setLeavingRoom(room)

@@ -80,8 +80,12 @@ export function EntryScreen({ addTxn, addScheduledFixed, addMonthlyFixed, close,
   const handleFileChange = async (e) => {
     const file = e.target.files[0]
     if (!file) return
-    const compressed = await compressImage(file)
-    setReceipt({ url: compressed, name: file.name })
+    try {
+      const compressed = await compressImage(file)
+      setReceipt({ url: compressed, name: file.name })
+    } catch {
+      alert('ไม่สามารถโหลดรูปได้ กรุณาลองใหม่')
+    }
   }
 
   const submit = async () => {
