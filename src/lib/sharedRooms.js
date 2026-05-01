@@ -1,5 +1,5 @@
 import {
-  collection, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc,
+  collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc,
   onSnapshot, query, orderBy, where, arrayUnion, increment,
   serverTimestamp, writeBatch,
 } from 'firebase/firestore'
@@ -78,7 +78,7 @@ export const sharedRoomsLib = {
     const data = snap.data()
     const remainingUids = (data.memberUids || []).filter(u => u !== uid)
     if (remainingUids.length === 0) {
-      const txnSnap = await import('firebase/firestore').then(({ getDocs }) => getDocs(txnCol(code)))
+      const txnSnap = await getDocs(txnCol(code))
       const batch = writeBatch(db)
       txnSnap.docs.forEach(d => batch.delete(d.ref))
       batch.delete(roomDoc(code))

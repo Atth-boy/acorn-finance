@@ -612,7 +612,7 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {rooms.map(r => {
                 const tone = roomTone(r.type)
-                const lastTxn = r.txns[0]
+                const lastTxn = r.lastTxn
                 return (
                   <button key={r.id} onClick={() => setActiveRoom(r)}
                     style={{ background: CC.surface, border: `1px solid ${CC.border}`, borderRadius: 22, padding: 0, overflow: 'hidden', textAlign: 'left', fontFamily: FONT, cursor: 'pointer', width: '100%', display: 'block' }}>
