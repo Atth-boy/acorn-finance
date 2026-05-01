@@ -731,8 +731,8 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 11, color: CC.walnut, letterSpacing: 0.8, textTransform: 'uppercase', fontWeight: 600 }}>กองรวม</div>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 3, marginTop: 4 }}>
-                        <span style={{ fontSize: 14, color: CC.walnut, fontFamily: DISPLAY }}>฿</span>
-                        <span style={{ fontSize: 30, fontWeight: 700, fontFamily: DISPLAY, letterSpacing: -0.8, fontVariantNumeric: 'tabular-nums', color: CC.ink }}>
+                        <span style={{ fontSize: 14, color: CC.walnut, fontFamily: DISPLAY }}>{familyTotal < 0 ? '−' : ''}฿</span>
+                        <span style={{ fontSize: 30, fontWeight: 700, fontFamily: DISPLAY, letterSpacing: -0.8, fontVariantNumeric: 'tabular-nums', color: familyTotal < 0 ? CC.ember : CC.ink }}>
                           {Math.abs(familyTotal).toLocaleString('th-TH')}
                         </span>
                       </div>
