@@ -179,6 +179,9 @@ export default function App() {
     if (defaultWallet) {
       await storage.incrementWalletAmt(user.uid, defaultWallet.id, -txn.amt)
     }
+    if (txn.mode === 'saving' && txn.walletId) {
+      await storage.incrementWalletAmt(user.uid, txn.walletId, -Math.abs(txn.amt))
+    }
   }
 
   const editTxn = async (txn, oldAmt) => {
