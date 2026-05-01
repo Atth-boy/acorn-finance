@@ -6,6 +6,15 @@ import { Leaf }     from '../components/Leaf'
 
 const DAY_LABELS = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส']
 
+const CATS = [
+  { id: 'food',    ic: '🍜', l: 'อาหาร' },
+  { id: 'coffee',  ic: '☕', l: 'กาแฟ' },
+  { id: 'transit', ic: '🚇', l: 'เดินทาง' },
+  { id: 'shop',    ic: '🛍️', l: 'ช้อป' },
+  { id: 'home',    ic: '🏠', l: 'บ้าน' },
+  { id: 'other',   ic: '🎁', l: 'อื่นๆ' },
+]
+
 export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [], onDeleteTxn, onEditTxn }) {
   const [chartPeriod,  setChartPeriod]  = useState('week')
   const [showAll,      setShowAll]      = useState(false)
@@ -16,6 +25,7 @@ export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [], onDel
   const [editNote,     setEditNote]     = useState('')
   const [saving,       setSaving]       = useState(false)
   const [editAmt,      setEditAmt]      = useState('')
+  const [editCat,      setEditCat]      = useState('other')
 
   const firstName = user?.displayName?.split(' ')[0] || 'คุณ'
   const now        = new Date()
@@ -297,7 +307,13 @@ export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [], onDel
                 )}
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button
-                    onClick={() => { setEditLabel(selectedTxn.label); setEditNote(selectedTxn.note || ''); setEditAmt(Math.abs(selectedTxn.amt).toString()); setEditMode(true) }}
+                    onClick={() => {
+                      setEditLabel(selectedTxn.label)
+                      setEditNote(selectedTxn.note || '')
+                      setEditAmt(Math.abs(selectedTxn.amt).toString())
+                      setEditCat(CATS.find(c => c.l === selectedTxn.cat)?.id || 'other')
+                      setEditMode(true)
+                    }}
                     style={{ flex: 1, padding: '13px', borderRadius: 16, border: `1px solid ${CC.border}`, background: CC.surface, color: CC.ink, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>
                     ✏️ แก้ไข
                   </button>
@@ -317,6 +333,29 @@ export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [], onDel
               </>
             ) : (
               <>
+                {selectedTxn.amt < 0 && selectedTxn.cat !== 'รับเข้า' && (
+                  <>
+                    <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>หมวดหมู่</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 5, marginBottom: 12 }}>
+                      {CATS.map(c => {
+                        const on = c.id === editCat
+                        return (
+                          <button key={c.id} onClick={() => setEditCat(c.id)} style={{
+                            aspectRatio: '1', borderRadius: 10, cursor: 'pointer', padding: 0,
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
+                            background: on ? CC.amber : CC.surface,
+                            color: on ? '#fff' : CC.ink,
+                            border: on ? 'none' : `1px solid ${CC.border}`,
+                            fontFamily: FONT,
+                          }}>
+                            <span style={{ fontSize: 15 }}>{c.ic}</span>
+                            <span style={{ fontSize: 8, fontWeight: 500 }}>{c.l}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </>
+                )}
                 <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>ชื่อรายการ</div>
                 <input
                   type="text"
@@ -353,7 +392,10 @@ export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [], onDel
                       const absAmt = parseFloat(editAmt) || 0
                       if (absAmt <= 0) { setSaving(false); return }
                       const newAmt = selectedTxn.amt >= 0 ? absAmt : -absAmt
-                      await onEditTxn?.({ ...selectedTxn, label: editLabel.trim() || selectedTxn.label, note: editNote.trim() || null, amt: newAmt }, selectedTxn.amt)
+                      const catObj = CATS.find(c => c.id === editCat)
+                      const updatedCat = (selectedTxn.amt < 0 && catObj) ? catObj.l : selectedTxn.cat
+                      const updatedIc  = (selectedTxn.amt < 0 && catObj) ? catObj.ic : selectedTxn.ic
+                      await onEditTxn?.({ ...selectedTxn, label: editLabel.trim() || selectedTxn.label, note: editNote.trim() || null, amt: newAmt, cat: updatedCat, ic: updatedIc }, selectedTxn.amt)
                       setSaving(false)
                       setSelectedTxn(null)
                       setEditMode(false)

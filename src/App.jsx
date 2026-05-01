@@ -186,9 +186,17 @@ export default function App() {
     const { _id, ...rest } = txn
     await storage.updateTxn(user.uid, _id, rest)
     if (oldAmt !== undefined && txn.amt !== oldAmt) {
+      const diff = txn.amt - oldAmt
       const defaultWallet = wallets.find(w => w.isDefault)
       if (defaultWallet) {
-        await storage.upsertWallet(user.uid, { ...defaultWallet, amt: defaultWallet.amt + (txn.amt - oldAmt) })
+        await storage.upsertWallet(user.uid, { ...defaultWallet, amt: defaultWallet.amt + diff })
+      }
+      if (txn.mode === 'saving' && txn.walletId) {
+        const savingsWallet = wallets.find(w => w.id === txn.walletId)
+        if (savingsWallet) {
+          const savingsDiff = Math.abs(txn.amt) - Math.abs(oldAmt)
+          await storage.upsertWallet(user.uid, { ...savingsWallet, amt: savingsWallet.amt + savingsDiff })
+        }
       }
     }
   }
