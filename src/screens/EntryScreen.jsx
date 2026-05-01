@@ -343,25 +343,39 @@ export function EntryScreen({ addTxn, addScheduledFixed, addMonthlyFixed, close,
           <div style={{ width: '100%', background: CC.bg, borderRadius: '24px 24px 0 0', padding: '22px 16px 36px' }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 16, fontWeight: 700, fontFamily: DISPLAY, marginBottom: 4 }}>เลือกกระเป๋าออม 🏦</div>
             <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 14 }}>เงินจะถูกบันทึกว่าเข้ากระเป๋านี้</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {wallets.filter(w => w.amt >= 0).map(w => {
-                const sel = savedWallet?.id === w.id
-                return (
-                  <button key={w.id} onClick={() => { setSavedWallet(w); setShowWalletPick(false) }} style={{
-                    display: 'flex', alignItems: 'center', gap: 14, padding: '12px 14px', borderRadius: 14, cursor: 'pointer', textAlign: 'left', fontFamily: FONT,
-                    background: sel ? CC.walnutSoft : CC.surface,
-                    border: sel ? `2px solid ${CC.walnut}` : `1px solid ${CC.border}`,
-                  }}>
-                    <span style={{ fontSize: 22 }}>{w.ic}</span>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: CC.ink }}>{w.name}</div>
-                      <div style={{ fontSize: 11, color: CC.walnut, marginTop: 1 }}>{w.sub}</div>
-                    </div>
-                    {sel && <span style={{ marginLeft: 'auto', fontSize: 16 }}>✓</span>}
-                  </button>
-                )
-              })}
-            </div>
+            {(() => {
+              const savingsWallets = wallets.filter(w => !w.isDefault && w.amt >= 0)
+              if (savingsWallets.length === 0) return (
+                <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>🌱</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: CC.ink, marginBottom: 6 }}>ยังไม่มีบัญชีเงินออม</div>
+                  <div style={{ fontSize: 12, color: CC.walnut, lineHeight: 1.6 }}>
+                    ไปที่หน้า บัญชี → เพิ่มบัญชีออมเงิน{'\n'}(PVD / กองทุน / เงินฝากประจำ / อื่นๆ) ก่อนนะ
+                  </div>
+                </div>
+              )
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {savingsWallets.map(w => {
+                    const sel = savedWallet?.id === w.id
+                    return (
+                      <button key={w.id} onClick={() => { setSavedWallet(w); setShowWalletPick(false) }} style={{
+                        display: 'flex', alignItems: 'center', gap: 14, padding: '12px 14px', borderRadius: 14, cursor: 'pointer', textAlign: 'left', fontFamily: FONT,
+                        background: sel ? CC.walnutSoft : CC.surface,
+                        border: sel ? `2px solid ${CC.walnut}` : `1px solid ${CC.border}`,
+                      }}>
+                        <span style={{ fontSize: 22 }}>{w.ic}</span>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: CC.ink }}>{w.name}</div>
+                          <div style={{ fontSize: 11, color: CC.walnut, marginTop: 1 }}>{w.sub}</div>
+                        </div>
+                        {sel && <span style={{ marginLeft: 'auto', fontSize: 16 }}>✓</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+              )
+            })()}
           </div>
         </div>
       )}
