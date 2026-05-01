@@ -80,7 +80,7 @@ export default function App() {
           processedRef.current.add(fe.id)
           const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
           await storage.add(user.uid, {
-            id: Date.now(), label: fe.name, cat: 'ตั้งเวลา', ic: fe.ic,
+            id: new Date(fe.dueDate).getTime(), label: fe.name, cat: 'ตั้งเวลา', ic: fe.ic,
             amt: -fe.amt, time: timeStr, mode: 'schedule', note: null, receiptImg: null,
           })
           await storage.upsertWallet(user.uid, { ...defaultWallet, amt: defaultWallet.amt - fe.amt })
