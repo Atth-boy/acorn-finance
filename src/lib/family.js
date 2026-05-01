@@ -1,6 +1,6 @@
 import {
-  collection, doc, getDoc, setDoc, updateDoc, deleteDoc,
-  addDoc, onSnapshot, query, orderBy, arrayUnion, serverTimestamp,
+  collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
+  addDoc, onSnapshot, query, orderBy, arrayUnion, serverTimestamp, writeBatch,
 } from 'firebase/firestore'
 import { db } from './firebase'
 
@@ -69,7 +69,11 @@ export const familyLib = {
   },
 
   async deleteFamily(code, uid) {
-    await deleteDoc(familyDoc(code))
+    const txnSnap = await getDocs(familyTxns(code))
+    const batch = writeBatch(db)
+    txnSnap.docs.forEach(d => batch.delete(d.ref))
+    batch.delete(familyDoc(code))
+    await batch.commit()
     await setDoc(profileDoc(uid), { familyCode: null }, { merge: true })
   },
 }
