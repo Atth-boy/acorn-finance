@@ -95,7 +95,7 @@ export function EntryScreen({ addTxn, addScheduledFixed, addMonthlyFixed, close,
     setSubmitting(true)
     try {
       const c = CATS.find(x => x.id === cat)
-      const label = note.trim() || (type === 'income' ? 'รับเงิน' : c.l)
+      const label = note.trim() || (type === 'income' ? 'รับเงิน' : mode === 'saving' ? 'เก็บออม' : c.l)
 
       if (type === 'income') {
         await addTxn({
@@ -115,7 +115,9 @@ export function EntryScreen({ addTxn, addScheduledFixed, addMonthlyFixed, close,
         })
       } else {
         await addTxn({
-          id: Date.now(), label, cat: c.l, ic: c.ic,
+          id: Date.now(), label,
+          cat: mode === 'saving' ? 'เก็บออม' : c.l,
+          ic:  mode === 'saving' ? (savedWallet?.ic || '🏦') : c.ic,
           amt: -n, time: now(), mode, note: note.trim() || null,
           wallet: mode === 'saving' ? savedWallet?.name : null,
           walletId: mode === 'saving' ? savedWallet?.id  : null,
@@ -188,8 +190,8 @@ export function EntryScreen({ addTxn, addScheduledFixed, addMonthlyFixed, close,
           ) : null })()}
         </div>
 
-        {/* Categories — expense only */}
-        {type === 'expense' && (
+        {/* Categories — expense only, ไม่แสดงเมื่อ saving */}
+        {type === 'expense' && mode !== 'saving' && (
           <div style={{ padding: '0 16px 8px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 5 }}>
               {CATS.map(c => {
