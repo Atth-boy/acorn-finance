@@ -278,8 +278,8 @@ export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [], onDel
             {!editMode ? (
               <>
                 {selectedTxn.receiptImg && (
-                  <div style={{ marginBottom: 14, borderRadius: 12, overflow: 'hidden', maxHeight: 180 }}>
-                    <img src={selectedTxn.receiptImg} alt="ใบเสร็จ" style={{ width: '100%', objectFit: 'cover', display: 'block' }} />
+                  <div style={{ marginBottom: 14, borderRadius: 12, overflow: 'hidden', background: '#000' }}>
+                    <img src={selectedTxn.receiptImg} alt="ใบเสร็จ" style={{ width: '100%', objectFit: 'contain', display: 'block' }} />
                   </div>
                 )}
                 {selectedTxn.note && (

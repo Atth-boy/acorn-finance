@@ -218,8 +218,8 @@ export function FamilyEntryScreen({ addFamilyTxn, close }) {
             <input ref={fileRef} type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
           </label>
           {receipt && (
-            <div style={{ marginTop: 6, borderRadius: 10, overflow: 'hidden', maxHeight: 100 }}>
-              <img src={receipt.url} alt="ใบเสร็จ" style={{ width: '100%', objectFit: 'cover', display: 'block' }} />
+            <div style={{ marginTop: 6, borderRadius: 10, overflow: 'hidden', background: '#000' }}>
+              <img src={receipt.url} alt="ใบเสร็จ" style={{ width: '100%', objectFit: 'contain', display: 'block' }} />
             </div>
           )}
         </div>
