@@ -5,7 +5,7 @@ import { familyLib } from '../lib/family'
 import { CC, DISPLAY, FONT } from '../tokens'
 import { Squirrel } from '../components/Squirrel'
 
-export function SettingsScreen({ txns, user, onSignOut, onReset, onResetAll, rooms = [], onRoomsChange, familyData, onLeaveFamily, onUserRefresh }) {
+export function SettingsScreen({ txns, user, onSignOut, onReset, onResetAll, rooms = [], onLeaveRoom, familyData, onLeaveFamily, onUserRefresh }) {
   // Section 1 — profile
   const [editingName, setEditingName] = useState(false)
   const [newName,     setNewName]     = useState('')
@@ -49,16 +49,9 @@ export function SettingsScreen({ txns, user, onSignOut, onReset, onResetAll, roo
 
   const handleLeaveRoom = (room) => setLeavingRoom(room)
 
-  const confirmLeaveRoom = () => {
+  const confirmLeaveRoom = async () => {
     if (!leavingRoom) return
-    if (leavingRoom.members.length <= 1) {
-      onRoomsChange(rs => rs.filter(r => r.id !== leavingRoom.id))
-    } else {
-      onRoomsChange(rs => rs.map(r => r.id === leavingRoom.id
-        ? { ...r, members: r.members.filter(m => !m.isMe) }
-        : r
-      ))
-    }
+    await onLeaveRoom(leavingRoom.code)
     setLeavingRoom(null)
   }
 

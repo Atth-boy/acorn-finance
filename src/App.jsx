@@ -3,6 +3,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { auth } from './lib/firebase'
 import { storage } from './lib/storage'
 import { familyLib } from './lib/family'
+import { sharedRoomsLib } from './lib/sharedRooms'
 import { CC, FONT, PAPER } from './tokens'
 
 const INIT_WALLETS = [
@@ -35,6 +36,7 @@ export default function App() {
   // Wallet sub-page (0 = personal, 1 = shared rooms, 2 = family pot)
   const [walletSubPage, setWalletSubPage] = useState(0)
   const [rooms,         setRooms]         = useState([])
+  const roomsUnsubRef = useRef(null)
 
   // Family pot — undefined=loading, null=ไม่มี family, object=มี family
   const [familyData,      setFamilyData]      = useState(undefined)
@@ -109,6 +111,12 @@ export default function App() {
       familyUnsubRef.current = familyLib.subscribeTxns(code, setFamilyTxns)
     })
     return () => familyUnsubRef.current?.()
+  }, [user])
+
+  useEffect(() => {
+    if (!user) return
+    roomsUnsubRef.current = sharedRoomsLib.subscribeUserRooms(user.uid, setRooms)
+    return () => { roomsUnsubRef.current?.(); setRooms([]) }
   }, [user])
 
   const showToast = (msg) => {
@@ -218,6 +226,24 @@ export default function App() {
     return true
   }
 
+  const handleCreateRoom = async (name, type, ic) => {
+    const code = sharedRoomsLib.genCode()
+    await sharedRoomsLib.createRoom(code, { name, type, ic }, user)
+    return code
+  }
+
+  const handleJoinRoom = async (code) => {
+    return await sharedRoomsLib.joinRoom(code.trim().toUpperCase(), user)
+  }
+
+  const handleLeaveRoom = async (code) => {
+    return await sharedRoomsLib.leaveRoom(code, user.uid)
+  }
+
+  const handleAddRoomTxn = async (code, txn) => {
+    await sharedRoomsLib.addTxn(code, txn)
+  }
+
   const handleUserRefresh = () => {
     if (auth.currentUser) setUser(u => ({ ...u, displayName: auth.currentUser.displayName }))
   }
@@ -273,7 +299,9 @@ export default function App() {
             onJoinFamily={handleJoinFamily}
             onPageChange={setWalletSubPage}
             rooms={rooms}
-            onRoomsChange={setRooms}
+            onCreateRoom={handleCreateRoom}
+            onJoinRoom={handleJoinRoom}
+            onAddRoomTxn={handleAddRoomTxn}
           />
         )}
         {tab === 'reports'  && <ReportsScreen txns={txns} familyTxns={familyTxns} user={user} />}
@@ -288,7 +316,7 @@ export default function App() {
               window.location.reload()
             }}
             rooms={rooms}
-            onRoomsChange={setRooms}
+            onLeaveRoom={handleLeaveRoom}
             familyData={familyData}
             onLeaveFamily={handleFamilyLeft}
             onUserRefresh={handleUserRefresh}

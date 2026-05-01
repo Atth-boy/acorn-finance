@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { sharedRoomsLib } from '../lib/sharedRooms'
 import { CC, DISPLAY, FONT, PAPER } from '../tokens'
 import { Squirrel } from '../components/Squirrel'
 import { Acorn }    from '../components/Acorn'
@@ -134,7 +135,7 @@ function AcornJar({ acorns, w = 110, h = 130 }) {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────
-export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal, onUpsertWallet, onDeleteWallet, onSaveFixed, onDeleteFixed, familyData, familyTxns = [], onCreateFamily, onJoinFamily, onPageChange, rooms = [], onRoomsChange }) {
+export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal, onUpsertWallet, onDeleteWallet, onSaveFixed, onDeleteFixed, familyData, familyTxns = [], onCreateFamily, onJoinFamily, onPageChange, rooms = [], onCreateRoom, onJoinRoom, onAddRoomTxn }) {
   const scrollRef = useRef(null)
   const [page, setPage] = useState(0)
 
@@ -185,6 +186,17 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
   const [customMemberName,  setCustomMemberName]  = useState('')
   const [copied,            setCopied]            = useState(false)
   const [showRoomSummary,   setShowRoomSummary]   = useState(false)
+  const [activeRoomTxns,    setActiveRoomTxns]    = useState([])
+  const roomTxnUnsubRef = useRef(null)
+
+  useEffect(() => {
+    roomTxnUnsubRef.current?.()
+    roomTxnUnsubRef.current = null
+    setActiveRoomTxns([])
+    if (!activeRoom) return
+    roomTxnUnsubRef.current = sharedRoomsLib.subscribeRoomTxns(activeRoom.code, setActiveRoomTxns)
+    return () => roomTxnUnsubRef.current?.()
+  }, [activeRoom?.code])
 
   // Derived
   const totalAmt       = wallets.reduce((s, w) => s + w.amt, 0)
@@ -266,31 +278,28 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
   const handleDeleteFixed = () => { onDeleteFixed(editFixed.id); setEditFixed(null) }
 
   // Shared Rooms handlers
-  const handleCreateRoom = () => {
+  const handleCreateRoom = async () => {
     if (!roomName.trim()) return
-    const code = genCode()
     const rt = ROOM_TYPES.find(r => r.id === roomType)
-    const newRoom = { id: Date.now().toString(), name: roomName.trim(), type: roomType, ic: rt.ic, code, members: [{ name: 'ฉัน', bg: CC.moss }], balance: 0, txns: [] }
-    onRoomsChange(rs => [...rs, newRoom])
-    setRoomName(''); setShowCreateRoom(false); setCreatedCode({ name: newRoom.name, code })
+    const code = await onCreateRoom(roomName.trim(), roomType, rt.ic)
+    setRoomName(''); setShowCreateRoom(false); setCreatedCode({ name: roomName.trim(), code })
   }
-  const handleJoinRoom = () => {
+  const handleJoinRoom = async () => {
     const code = joinCode.trim().toUpperCase()
     if (!code) return
-    const found = rooms.find(r => r.code === code)
-    if (found) { setActiveRoom(found); setShowJoinRoom(false); setJoinCode('') }
+    const ok = await onJoinRoom(code)
+    if (ok) { setShowJoinRoom(false); setJoinCode('') }
     else { alert(`ไม่พบรหัส ${code}`) }
   }
   const handleCopyCode = (code) => {
     navigator.clipboard?.writeText(code).catch(() => {})
     setCopied(true); setTimeout(() => setCopied(false), 1500)
   }
-  const handleAddEntry = () => {
+  const handleAddEntry = async () => {
     const amt = parseFloat(entryAmt.replace(/,/g, ''))
     if (!amt || !addEntryRoom) return
     const txn = { label: entryLabel || 'รายการ', amt: -Math.abs(amt), by: entryBy || addEntryRoom.members[0]?.name, ic: '💸' }
-    onRoomsChange(rs => rs.map(r => r.id === addEntryRoom.id ? { ...r, balance: r.balance + txn.amt, txns: [txn, ...r.txns] } : r))
-    if (activeRoom?.id === addEntryRoom.id) setActiveRoom(prev => ({ ...prev, balance: prev.balance + txn.amt, txns: [txn, ...prev.txns] }))
+    await onAddRoomTxn(addEntryRoom.code, txn)
     setEntryLabel(''); setEntryAmt(''); setEntryBy(null); setCustomMemberName(''); setAddEntryRoom(null)
   }
 
@@ -959,12 +968,17 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
                   <div style={{ fontSize: 11, color: CC.walnut, marginLeft: 4 }}>{activeRoom.members.length} คน</div>
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 22, fontWeight: 700, fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', color: activeRoom.balance < 0 ? CC.ember : CC.moss }}>
-                  {activeRoom.balance < 0 ? '−' : '+'}฿{Math.abs(activeRoom.balance).toLocaleString('th-TH')}
-                </div>
-                <div style={{ fontSize: 11, color: CC.walnut }}>{activeRoom.balance < 0 ? 'รายจ่ายรวม' : 'คงเหลือ'}</div>
-              </div>
+              {(() => {
+                const bal = activeRoomTxns.reduce((s, t) => s + t.amt, 0)
+                return (
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 22, fontWeight: 700, fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', color: bal < 0 ? CC.ember : CC.moss }}>
+                      {bal < 0 ? '−' : '+'}฿{Math.abs(bal).toLocaleString('th-TH')}
+                    </div>
+                    <div style={{ fontSize: 11, color: CC.walnut }}>{bal < 0 ? 'รายจ่ายรวม' : 'คงเหลือ'}</div>
+                  </div>
+                )
+              })()}
             </div>
             {/* Room code + summary toggle */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: CC.bg, border: `1px solid ${CC.border}`, borderRadius: 12, padding: '10px 14px', marginBottom: 10 }}>
@@ -980,7 +994,7 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
             {/* Per-person summary */}
             {showRoomSummary && (() => {
               const byPerson = {}
-              activeRoom.txns.forEach(t => {
+              activeRoomTxns.forEach(t => {
                 if (!byPerson[t.by]) byPerson[t.by] = 0
                 byPerson[t.by] += Math.abs(t.amt)
               })
@@ -1003,10 +1017,10 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
             })()}
             {/* Transactions */}
             <div style={{ fontSize: 12, color: CC.walnut, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>รายการ</div>
-            {activeRoom.txns.length === 0
+            {activeRoomTxns.length === 0
               ? <div style={{ textAlign: 'center', color: CC.walnut, fontSize: 13, padding: '20px 0' }}>ยังไม่มีรายการ</div>
-              : activeRoom.txns.map((t, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: i < activeRoom.txns.length - 1 ? `1px solid ${CC.border}` : 'none' }}>
+              : activeRoomTxns.map((t, i) => (
+                <div key={t._id || i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: i < activeRoomTxns.length - 1 ? `1px solid ${CC.border}` : 'none' }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: CC.amberSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{t.ic}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>{t.label}</div>
