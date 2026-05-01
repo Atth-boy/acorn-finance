@@ -851,7 +851,10 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
       {editWallet && (
         <div style={overlay} onClick={() => setEditWallet(null)}>
           <div style={sheet} onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: 17, fontWeight: 700, fontFamily: DISPLAY, marginBottom: 16 }}>{editWallet.ic} แก้ไขกระเป๋า</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ fontSize: 17, fontWeight: 700, fontFamily: DISPLAY }}>{editWallet.ic} แก้ไขกระเป๋า</div>
+              <button onClick={() => setEditWallet(null)} style={{ background: CC.surface, border: `1px solid ${CC.border}`, borderRadius: 20, width: 32, height: 32, fontSize: 18, color: CC.walnut, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+            </div>
             <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>ชื่อบัญชี</div>
             <input type="text" value={editWName} onChange={e => setEditWName(e.target.value)} autoFocus style={{ ...inp, marginBottom: 12 }} />
             <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>คำอธิบาย</div>
@@ -877,7 +880,10 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
       {editFixed && (
         <div style={overlay} onClick={() => setEditFixed(null)}>
           <div style={sheet} onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: 17, fontWeight: 700, fontFamily: DISPLAY, marginBottom: 16 }}>{editFixed.ic} แก้ไขค่าใช้จ่ายคงที่</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ fontSize: 17, fontWeight: 700, fontFamily: DISPLAY }}>{editFixed.ic} แก้ไขค่าใช้จ่ายคงที่</div>
+              <button onClick={() => setEditFixed(null)} style={{ background: CC.surface, border: `1px solid ${CC.border}`, borderRadius: 20, width: 32, height: 32, fontSize: 18, color: CC.walnut, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+            </div>
             <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>ชื่อ</div>
             <input type="text" value={editFName} onChange={e => setEditFName(e.target.value)} autoFocus style={{ ...inp, marginBottom: 12 }} />
             <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>จำนวนเงิน (บาท)</div>

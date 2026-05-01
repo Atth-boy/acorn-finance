@@ -262,8 +262,14 @@ export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [], onDel
       {selectedTxn && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: 'rgba(42,31,18,0.55)', display: 'flex', alignItems: 'flex-end' }}
           onClick={() => { setSelectedTxn(null); setEditMode(false) }}>
-          <div style={{ width: '100%', background: CC.bg, borderRadius: '24px 24px 0 0', padding: '24px 20px 40px' }}
+          <div style={{ width: '100%', background: CC.bg, borderRadius: '24px 24px 0 0', padding: '20px 20px 40px', maxHeight: '85vh', overflowY: 'auto' }}
             onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+              <button onClick={() => { setSelectedTxn(null); setEditMode(false) }}
+                style={{ background: CC.surface, border: `1px solid ${CC.border}`, borderRadius: 20, width: 32, height: 32, fontSize: 18, color: CC.walnut, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT }}>
+                ×
+              </button>
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
               <div style={{ width: 52, height: 52, borderRadius: 16, background: selectedTxn.amt > 0 ? CC.mossSoft : CC.amberSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>{selectedTxn.ic}</div>
               <div style={{ flex: 1 }}>
