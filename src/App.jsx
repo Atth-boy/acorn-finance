@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
+import { useRegisterSW } from 'virtual:pwa-register/react'
 import { auth } from './lib/firebase'
 import { storage } from './lib/storage'
 import { familyLib } from './lib/family'
@@ -22,6 +23,8 @@ import { TabBar }  from './components/TabBar'
 import { Toast }   from './components/Toast'
 
 export default function App() {
+  const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW()
+
   const [user, setUser]               = useState(undefined)
   const [tab, setTab]                 = useState('home')
   const [entryOpen, setEntryOpen]     = useState(false)
@@ -370,6 +373,27 @@ export default function App() {
             walletSubPage={walletSubPage}
             onFamilyAdd={() => setFamilyEntryOpen(true)}
           />
+        )}
+
+        {needRefresh && (
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, zIndex: 9999,
+            background: CC.walnut, color: CC.surface,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '10px 16px', fontFamily: FONT, fontSize: 14,
+          }}>
+            <span>มีเวอร์ชันใหม่พร้อมใช้งาน 🌰</span>
+            <button
+              onClick={() => updateServiceWorker(true)}
+              style={{
+                background: CC.surface, color: CC.walnut, border: 'none',
+                borderRadius: 8, padding: '5px 14px',
+                fontFamily: FONT, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              อัปเดต
+            </button>
+          </div>
         )}
 
         {toast && <Toast message={toast} />}
