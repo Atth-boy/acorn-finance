@@ -13,7 +13,7 @@ const CATS = [
 const EXTRA_CATS = [
   { id: 'entertain',   ic: '🎬', l: 'บันเทิง' },
   { id: 'travel',      ic: '✈️', l: 'ท่องเที่ยว' },
-  { id: 'health',      ic: '💊', l: 'รักษา' },
+  { id: 'health',      ic: '💊', l: 'สุขภาพ' },
   { id: 'beauty',      ic: '💄', l: 'ความงาม' },
   { id: 'gift',        ic: '🎁', l: 'ของขวัญ' },
   { id: 'convenience', ic: '🏪', l: 'สะดวกซื้อ' },

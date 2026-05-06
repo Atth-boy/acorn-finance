@@ -10,8 +10,19 @@ const FAMILY_CATS = [
   { id: 'home',   ic: '🏠', l: 'บ้าน' },
   { id: 'health', ic: '💊', l: 'สุขภาพ' },
   { id: 'shop',   ic: '🛍️', l: 'ซื้อของ' },
-  { id: 'other',  ic: '🎁', l: 'อื่นๆ' },
 ]
+
+const FAMILY_EXTRA_CATS = [
+  { id: 'entertain',   ic: '🎬', l: 'บันเทิง' },
+  { id: 'travel',      ic: '✈️', l: 'ท่องเที่ยว' },
+  { id: 'gift',        ic: '🎁', l: 'ของขวัญ' },
+  { id: 'edu',         ic: '📚', l: 'ศึกษา' },
+  { id: 'convenience', ic: '🏪', l: 'สะดวกซื้อ' },
+  { id: 'bill',        ic: '📄', l: 'bill&fees' },
+  { id: 'other',       ic: '🗂️', l: 'อื่นๆ' },
+]
+
+const ALL_FAMILY_CATS = [...FAMILY_CATS, ...FAMILY_EXTRA_CATS]
 
 const MODES = [
   { id: 'daily',    l: 'รายวัน',   ic: '📅' },
@@ -38,7 +49,8 @@ export function FamilyEntryScreen({ addFamilyTxn, close, user }) {
   const [mode,         setMode]         = useState('daily')
   const [note,         setNote]         = useState('')
   const [receipt,      setReceipt]      = useState(null)
-  const [showCalendar, setShowCalendar] = useState(false)
+  const [showCalendar,  setShowCalendar]  = useState(false)
+  const [showMoreCats,  setShowMoreCats]  = useState(false)
   const [scheduleDate, setScheduleDate] = useState(null)
   const [calYear,      setCalYear]      = useState(new Date().getFullYear())
   const [calMonth,     setCalMonth]     = useState(new Date().getMonth())
@@ -65,7 +77,7 @@ export function FamilyEntryScreen({ addFamilyTxn, close, user }) {
   const submit = () => {
     const n = parseFloat(amount) || 0
     if (n === 0) return
-    const c   = FAMILY_CATS.find(x => x.id === cat)
+    const c   = ALL_FAMILY_CATS.find(x => x.id === cat)
     const now = new Date()
     addFamilyTxn({
       id:            now.getTime(),
@@ -169,7 +181,48 @@ export function FamilyEntryScreen({ addFamilyTxn, close, user }) {
                   </button>
                 )
               })}
+              {/* ปุ่ม เพิ่มเติม */}
+              {(() => {
+                const isExtraOn = FAMILY_EXTRA_CATS.some(c => c.id === cat)
+                const on = showMoreCats || isExtraOn
+                return (
+                  <button onClick={() => setShowMoreCats(v => !v)}
+                    style={{
+                      aspectRatio: '1', borderRadius: 12, cursor: 'pointer', padding: 0,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
+                      background: on ? FA      : '#F8F2E4',
+                      color:      on ? '#fff'  : CC.ink,
+                      border:     on ? 'none'  : '1px solid #C8A87A',
+                      fontFamily: FONT,
+                    }}>
+                    <span style={{ fontSize: 14 }}>{showMoreCats ? '▴' : '▾'}</span>
+                    <span style={{ fontSize: 8, fontWeight: 500 }}>เพิ่มเติม</span>
+                  </button>
+                )
+              })()}
             </div>
+            {/* Extra cats */}
+            {showMoreCats && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 5, marginTop: 5 }}>
+                {FAMILY_EXTRA_CATS.map(c => {
+                  const on = c.id === cat
+                  return (
+                    <button key={c.id} onClick={() => setCat(c.id)}
+                      style={{
+                        aspectRatio: '1', borderRadius: 12, cursor: 'pointer', padding: 0,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
+                        background: on ? FA      : '#F8F2E4',
+                        color:      on ? '#fff'  : CC.ink,
+                        border:     on ? 'none'  : '1px solid #C8A87A',
+                        fontFamily: FONT,
+                      }}>
+                      <span style={{ fontSize: 16 }}>{c.ic}</span>
+                      <span style={{ fontSize: 8, fontWeight: 500 }}>{c.l}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
 
