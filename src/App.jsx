@@ -23,7 +23,11 @@ import { TabBar }  from './components/TabBar'
 import { Toast }   from './components/Toast'
 
 export default function App() {
-  const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW()
+  const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW({
+    onRegistered(r) {
+      r && setInterval(() => r.update(), 60 * 60 * 1000)
+    },
+  })
 
   const [user, setUser]               = useState(undefined)
   const [tab, setTab]                 = useState('home')

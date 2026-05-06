@@ -8,8 +8,22 @@ const CATS = [
   { id: 'transit', ic: '🚇', l: 'เดินทาง' },
   { id: 'shop',    ic: '🛍️', l: 'ช้อป' },
   { id: 'home',    ic: '🏠', l: 'บ้าน' },
-  { id: 'other',   ic: '🎁', l: 'อื่นๆ' },
 ]
+
+const EXTRA_CATS = [
+  { id: 'entertain',   ic: '🎬', l: 'บันเทิง' },
+  { id: 'travel',      ic: '✈️', l: 'ท่องเที่ยว' },
+  { id: 'health',      ic: '💊', l: 'รักษา' },
+  { id: 'beauty',      ic: '💄', l: 'ความงาม' },
+  { id: 'gift',        ic: '🎁', l: 'ของขวัญ' },
+  { id: 'convenience', ic: '🏪', l: 'สะดวกซื้อ' },
+  { id: 'drink',       ic: '🧋', l: 'เครื่องดื่ม' },
+  { id: 'edu',         ic: '📚', l: 'ศึกษา' },
+  { id: 'bill',        ic: '📄', l: 'bill&fees' },
+  { id: 'other',       ic: '🗂️', l: 'อื่นๆ' },
+]
+
+const ALL_CATS = [...CATS, ...EXTRA_CATS]
 
 const MODES = [
   { id: 'daily',    l: 'รายวัน',   ic: '📅' },
@@ -62,6 +76,7 @@ export function EntryScreen({ addTxn, addScheduledFixed, addMonthlyFixed, close,
   const [calMonth,       setCalMonth]       = useState(new Date().getMonth())
   const [showWalletPick, setShowWalletPick] = useState(false)
   const [savedWallet,    setSavedWallet]    = useState(null)
+  const [showMoreCats,   setShowMoreCats]   = useState(false)
 
   const fileRef = useRef(null)
 
@@ -94,7 +109,7 @@ export function EntryScreen({ addTxn, addScheduledFixed, addMonthlyFixed, close,
     if (n === 0) return
     setSubmitting(true)
     try {
-      const c = CATS.find(x => x.id === cat)
+      const c = ALL_CATS.find(x => x.id === cat)
       const label = note.trim() || (type === 'income' ? 'รับเงิน' : mode === 'saving' ? 'เก็บออม' : c.l)
 
       if (type === 'income') {
@@ -210,7 +225,46 @@ export function EntryScreen({ addTxn, addScheduledFixed, addMonthlyFixed, close,
                   </button>
                 )
               })}
+              {/* ปุ่ม เพิ่มเติม */}
+              {(() => {
+                const isExtraOn = EXTRA_CATS.some(c => c.id === cat)
+                const on = showMoreCats || isExtraOn
+                return (
+                  <button onClick={() => setShowMoreCats(v => !v)} style={{
+                    aspectRatio: '1', borderRadius: 12, cursor: 'pointer', padding: 0,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
+                    background: on ? CC.amber : CC.surface,
+                    color:      on ? '#fff'   : CC.ink,
+                    border:     on ? 'none'   : `1px solid ${CC.border}`,
+                    fontFamily: FONT,
+                  }}>
+                    <span style={{ fontSize: 14 }}>{showMoreCats ? '▴' : '▾'}</span>
+                    <span style={{ fontSize: 8, fontWeight: 500 }}>เพิ่มเติม</span>
+                  </button>
+                )
+              })()}
             </div>
+            {/* Extra cats — แสดงเมื่อกด เพิ่มเติม */}
+            {showMoreCats && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 5, marginTop: 5 }}>
+                {EXTRA_CATS.map(c => {
+                  const on = c.id === cat
+                  return (
+                    <button key={c.id} onClick={() => setCat(c.id)} style={{
+                      aspectRatio: '1', borderRadius: 12, cursor: 'pointer', padding: 0,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
+                      background: on ? CC.amber : CC.surface,
+                      color:      on ? '#fff'   : CC.ink,
+                      border:     on ? 'none'   : `1px solid ${CC.border}`,
+                      fontFamily: FONT,
+                    }}>
+                      <span style={{ fontSize: 16 }}>{c.ic}</span>
+                      <span style={{ fontSize: 8, fontWeight: 500 }}>{c.l}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
 
