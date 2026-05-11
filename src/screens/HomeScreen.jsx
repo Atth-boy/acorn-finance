@@ -314,8 +314,11 @@ export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [], onDel
                       setEditCat(CATS.find(c => c.l === selectedTxn.cat)?.id || 'other')
                       setEditMode(true)
                     }}
-                    style={{ flex: 1, padding: '13px', borderRadius: 16, border: `1px solid ${CC.border}`, background: CC.surface, color: CC.ink, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>
-                    ✏️ แก้ไข
+                    style={{ flex: 1, padding: '13px', borderRadius: 16, border: `1px solid ${CC.border}`, background: CC.surface, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+                    <svg width="14" height="14" viewBox="0 0 13 13" fill="none" stroke={CC.walnut} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 2l2 2L4 11H2V9L9 2z" />
+                    </svg>
+                    <span style={{ fontSize: 14, fontWeight: 700, fontFamily: FONT, color: CC.ink }}>แก้ไข</span>
                   </button>
                   <button
                     onClick={async () => {
@@ -326,8 +329,21 @@ export function HomeScreen({ txns, user, wallets = [], fixedExpenses = [], onDel
                       setSelectedTxn(null)
                     }}
                     disabled={deleting}
-                    style={{ flex: 1, padding: '13px', borderRadius: 16, border: 'none', background: CC.emberSoft, color: CC.ember, fontSize: 14, fontWeight: 700, cursor: deleting ? 'default' : 'pointer', fontFamily: FONT }}>
-                    {deleting ? '⏳ กำลังลบ...' : '🗑️ ลบ'}
+                    style={{ flex: 1, padding: '13px', borderRadius: 16, border: `1px solid ${CC.border}`, background: CC.surface, cursor: deleting ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+                    {deleting ? (
+                      <span style={{ fontSize: 14, fontWeight: 700, fontFamily: FONT, color: CC.ember }}>กำลังลบ...</span>
+                    ) : (
+                      <>
+                        <svg width="13" height="14" viewBox="0 0 13 14" fill="none" stroke={CC.ember} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="1,3 12,3" />
+                          <path d="M4 3V2h5v1" />
+                          <rect x="2" y="3" width="9" height="9" rx="1.5" />
+                          <line x1="5" y1="6" x2="5" y2="10" />
+                          <line x1="8" y1="6" x2="8" y2="10" />
+                        </svg>
+                        <span style={{ fontSize: 14, fontWeight: 700, fontFamily: FONT, color: CC.ember }}>ลบ</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </>
