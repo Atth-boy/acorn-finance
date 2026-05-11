@@ -4,12 +4,21 @@ import { Squirrel } from '../components/Squirrel'
 import { Acorn }    from '../components/Acorn'
 
 const CATS = [
-  { id: 'food',    ic: '🍜', l: 'อาหาร' },
-  { id: 'coffee',  ic: '☕', l: 'กาแฟ' },
-  { id: 'transit', ic: '🚇', l: 'เดินทาง' },
-  { id: 'shop',    ic: '🛍️', l: 'ช้อป' },
-  { id: 'home',    ic: '🏠', l: 'บ้าน' },
-  { id: 'other',   ic: '🎁', l: 'อื่นๆ' },
+  { id: 'food',        ic: '🍜', l: 'อาหาร' },
+  { id: 'coffee',      ic: '☕', l: 'กาแฟ' },
+  { id: 'transit',     ic: '🚇', l: 'เดินทาง' },
+  { id: 'shop',        ic: '🛍️', l: 'ช้อป' },
+  { id: 'home',        ic: '🏠', l: 'บ้าน' },
+  { id: 'entertain',   ic: '🎬', l: 'บันเทิง' },
+  { id: 'travel',      ic: '✈️', l: 'ท่องเที่ยว' },
+  { id: 'health',      ic: '💊', l: 'สุขภาพ' },
+  { id: 'beauty',      ic: '💄', l: 'ความงาม' },
+  { id: 'gift',        ic: '🎁', l: 'ของขวัญ' },
+  { id: 'convenience', ic: '🏪', l: 'สะดวกซื้อ' },
+  { id: 'drink',       ic: '🧋', l: 'เครื่องดื่ม' },
+  { id: 'edu',         ic: '📚', l: 'ศึกษา' },
+  { id: 'bill',        ic: '📄', l: 'bill&fees' },
+  { id: 'other',       ic: '🗂️', l: 'อื่นๆ' },
 ]
 
 const COLORS = { 'อาหาร': CC.amber, 'เดินทาง': CC.moss, 'ช้อป': CC.walnut, 'บ้าน': '#A89968', 'อื่นๆ': CC.ember, 'กาแฟ': CC.ember, 'สาธารณูปโภค': '#7B9EA6', 'สุขภาพ': '#A06B8A', 'ซื้อของ': CC.walnut }
@@ -350,8 +359,20 @@ export function ReportsScreen({ txns, familyTxns = [], onEditTxn, onDeleteTxn, o
               </div>
               {!editLocked && (
                 <div style={{ display: 'flex', gap: 4, marginLeft: 8, flexShrink: 0 }}>
-                  <button onClick={() => openEdit(t)} style={{ width: 30, height: 30, borderRadius: 10, border: `1px solid ${CC.border}`, background: CC.surface, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✏️</button>
-                  <button onClick={() => setSelectedTxn(t)} style={{ width: 30, height: 30, borderRadius: 10, border: 'none', background: CC.emberSoft, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🗑️</button>
+                  <button onClick={() => openEdit(t)} style={{ width: 30, height: 30, borderRadius: 10, border: `1px solid ${CC.border}`, background: CC.surface, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke={CC.walnut} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 2l2 2L4 11H2V9L9 2z" />
+                    </svg>
+                  </button>
+                  <button onClick={() => setSelectedTxn(t)} style={{ width: 30, height: 30, borderRadius: 10, border: `1px solid ${CC.border}`, background: CC.surface, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                    <svg width="13" height="14" viewBox="0 0 13 14" fill="none" stroke={CC.ember} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="1,3 12,3" />
+                      <path d="M4 3V2h5v1" />
+                      <rect x="2" y="3" width="9" height="9" rx="1.5" />
+                      <line x1="5" y1="6" x2="5" y2="10" />
+                      <line x1="8" y1="6" x2="8" y2="10" />
+                    </svg>
+                  </button>
                 </div>
               )}
             </div>
