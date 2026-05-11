@@ -5,9 +5,20 @@ const TABS = [
   { id: 'home',     ic: '🏡', label: 'บ้าน' },
   { id: 'wallets',  ic: '🏦', label: 'บัญชี' },
   { id: 'fab',      ic: null,  label: '' },
-  { id: 'reports',  ic: '📊', label: 'รายงาน' },
+  { id: 'reports',  ic: null,  label: 'รายงาน' },
   { id: 'settings', ic: '⚙️', label: 'ตั้งค่า' },
 ]
+
+function ChartIcon({ color = CC.ink3 }) {
+  return (
+    <svg width="22" height="20" viewBox="0 0 22 20" fill="none">
+      <rect x="1"  y="11" width="4" height="8"  rx="1.5" fill={color} opacity="0.7" />
+      <rect x="7"  y="6"  width="4" height="13" rx="1.5" fill={color} opacity="0.85" />
+      <rect x="13" y="2"  width="4" height="17" rx="1.5" fill={color} />
+      <path d="M19 10 Q20 7 21 4" stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity="0.5" />
+    </svg>
+  )
+}
 
 function HouseIcon({ size = 28, color = '#fff' }) {
   return (
@@ -59,7 +70,11 @@ export function TabBar({ active, onChange, onAdd, walletSubPage = 0, onFamilyAdd
                 cursor: 'pointer', padding: '4px 0',
               }}
             >
-              <div style={{ fontSize: 20, opacity: t.id === 'fab' ? 0 : 1 }}>{t.ic}</div>
+              <div style={{ fontSize: 20, opacity: t.id === 'fab' ? 0 : 1, display: 'flex', justifyContent: 'center', alignItems: 'center', height: 24 }}>
+                {t.id === 'reports'
+                  ? <ChartIcon color={active === 'reports' ? CC.walnut : CC.ink3} />
+                  : t.ic}
+              </div>
               <div style={{ fontSize: 10, marginTop: 2, fontWeight: active === t.id ? 700 : 500 }}>{t.label}</div>
             </button>
           ))}

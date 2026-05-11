@@ -468,7 +468,7 @@ export function ReportsScreen({ txns, familyTxns = [], onEditTxn, onDeleteTxn, o
                 </button>
                 <button onClick={handleSave} disabled={saving}
                   style={{ flex: 1, padding: '13px', borderRadius: 16, border: 'none', background: CC.walnut, color: '#fff', fontSize: 14, fontWeight: 700, cursor: saving ? 'default' : 'pointer', fontFamily: FONT }}>
-                  {saving ? 'กำลังบันทึก...' : '💾 บันทึก'}
+                  {saving ? 'กำลังบันทึก...' : 'บันทึก'}
                 </button>
               </div>
             </>
