@@ -336,7 +336,7 @@ export default function App() {
             onAddRoomTxn={handleAddRoomTxn}
           />
         )}
-        {tab === 'reports'  && <ReportsScreen txns={txns} familyTxns={familyTxns} user={user} />}
+        {tab === 'reports'  && <ReportsScreen txns={txns} familyTxns={familyTxns} user={user} onEditTxn={editTxn} onDeleteTxn={deleteTxn} onEditFamilyTxn={editFamilyTxn} onDeleteFamilyTxn={deleteFamilyTxn} />}
         {tab === 'settings' && (
           <SettingsScreen
             txns={txns}

@@ -3,6 +3,15 @@ import { CC, DISPLAY, FONT } from '../tokens'
 import { Squirrel } from '../components/Squirrel'
 import { Acorn }    from '../components/Acorn'
 
+const CATS = [
+  { id: 'food',    ic: '🍜', l: 'อาหาร' },
+  { id: 'coffee',  ic: '☕', l: 'กาแฟ' },
+  { id: 'transit', ic: '🚇', l: 'เดินทาง' },
+  { id: 'shop',    ic: '🛍️', l: 'ช้อป' },
+  { id: 'home',    ic: '🏠', l: 'บ้าน' },
+  { id: 'other',   ic: '🎁', l: 'อื่นๆ' },
+]
+
 const COLORS = { 'อาหาร': CC.amber, 'เดินทาง': CC.moss, 'ช้อป': CC.walnut, 'บ้าน': '#A89968', 'อื่นๆ': CC.ember, 'กาแฟ': CC.ember, 'สาธารณูปโภค': '#7B9EA6', 'สุขภาพ': '#A06B8A', 'ซื้อของ': CC.walnut }
 const ICONS  = { 'อาหาร': '🍜', 'เดินทาง': '🚇', 'ช้อป': '🛍️', 'บ้าน': '🏠', 'อื่นๆ': '✨', 'กาแฟ': '☕', 'สาธารณูปโภค': '💡', 'สุขภาพ': '💊', 'ซื้อของ': '🛍️' }
 
@@ -58,12 +67,57 @@ function getHeading(id, date) {
 const FA = '#C8920A'
 const today = new Date()
 
-export function ReportsScreen({ txns, familyTxns = [] }) {
+export function ReportsScreen({ txns, familyTxns = [], onEditTxn, onDeleteTxn, onEditFamilyTxn, onDeleteFamilyTxn }) {
   const [period,       setPeriod]       = useState('month')
   const [account,      setAccount]      = useState('personal')
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [showPicker,   setShowPicker]   = useState(false)
+  const [editLocked,   setEditLocked]   = useState(true)
+  const [selectedTxn,  setSelectedTxn]  = useState(null)
+  const [editMode,     setEditMode]     = useState(false)
+  const [editLabel,    setEditLabel]    = useState('')
+  const [editNote,     setEditNote]     = useState('')
+  const [editAmt,      setEditAmt]      = useState('')
+  const [editCat,      setEditCat]      = useState('other')
+  const [deleting,     setDeleting]     = useState(false)
+  const [saving,       setSaving]       = useState(false)
   const dateInputRef = useRef(null)
+
+  const closeSheet = () => { setSelectedTxn(null); setEditMode(false) }
+
+  const openEdit = (t) => {
+    setSelectedTxn(t)
+    setEditLabel(t.label)
+    setEditNote(t.note || '')
+    setEditAmt(Math.abs(t.amt).toString())
+    setEditCat(CATS.find(c => c.l === t.cat)?.id || 'other')
+    setEditMode(true)
+  }
+
+  const handleDelete = async (t) => {
+    if (deleting) return
+    setDeleting(true)
+    if (account === 'family') await onDeleteFamilyTxn?.(t)
+    else await onDeleteTxn?.(t)
+    setDeleting(false)
+    closeSheet()
+  }
+
+  const handleSave = async () => {
+    if (saving) return
+    setSaving(true)
+    const absAmt = parseFloat(editAmt) || 0
+    if (absAmt <= 0) { setSaving(false); return }
+    const newAmt = selectedTxn.amt >= 0 ? absAmt : -absAmt
+    const catObj = CATS.find(c => c.id === editCat)
+    const updatedCat = (selectedTxn.amt < 0 && catObj) ? catObj.l : selectedTxn.cat
+    const updatedIc  = (selectedTxn.amt < 0 && catObj) ? catObj.ic : selectedTxn.ic
+    const updated = { ...selectedTxn, label: editLabel.trim() || selectedTxn.label, note: editNote.trim() || null, amt: newAmt, cat: updatedCat, ic: updatedIc }
+    if (account === 'family') await onEditFamilyTxn?.(updated)
+    else await onEditTxn?.(updated, selectedTxn.amt)
+    setSaving(false)
+    closeSheet()
+  }
 
   const source = account === 'family' ? familyTxns : txns
   const txnDate = (t) => new Date(t.id || Date.now())
@@ -107,6 +161,7 @@ export function ReportsScreen({ txns, familyTxns = [] }) {
   const todayISO = today.toISOString().slice(0, 10)
 
   return (
+    <>
     <div style={{ position: 'absolute', inset: 0, overflow: 'auto', paddingBottom: 110 }}>
       <div style={{ height: 'calc(16px + var(--sat))' }} />
 
@@ -114,14 +169,32 @@ export function ReportsScreen({ txns, familyTxns = [] }) {
       <div style={{ padding: '12px 24px 0' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <div style={{ fontSize: 13, color: CC.walnut, fontStyle: 'italic' }}>นี่คือสิ่งที่คุณใช้ไป</div>
-          <div style={{ display: 'flex', background: CC.surface, border: `1px solid ${CC.border}`, borderRadius: 100, padding: 3, gap: 2, flexShrink: 0 }}>
-            {[{ id: 'personal', label: 'ส่วนตัว' }, { id: 'family', label: '🏡 กองกลาง' }].map(a => (
-              <button key={a.id} onClick={() => setAccount(a.id)} style={{
-                padding: '5px 10px', borderRadius: 100, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, border: 'none',
-                background: account === a.id ? (a.id === 'family' ? FA : CC.walnut) : 'transparent',
-                color: account === a.id ? '#fff' : CC.ink2, transition: 'all 0.2s',
-              }}>{a.label}</button>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <button
+              onClick={() => { setEditLocked(v => !v); closeSheet() }}
+              title={editLocked ? 'ปลดล็อกแก้ไข' : 'ล็อกการแก้ไข'}
+              style={{ width: 30, height: 30, borderRadius: 100, border: `1px solid ${CC.border}`, background: CC.surface, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+              {editLocked ? (
+                <svg width="14" height="16" viewBox="0 0 14 16" fill="none" stroke={CC.walnut} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="1" y="7" width="12" height="8" rx="2" />
+                  <path d="M4 7V5a3 3 0 0 1 6 0v2" />
+                </svg>
+              ) : (
+                <svg width="14" height="16" viewBox="0 0 14 16" fill="none" stroke={CC.walnut} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="1" y="7" width="12" height="8" rx="2" />
+                  <path d="M4 7V5a3 3 0 0 1 6 0" />
+                </svg>
+              )}
+            </button>
+            <div style={{ display: 'flex', background: CC.surface, border: `1px solid ${CC.border}`, borderRadius: 100, padding: 3, gap: 2 }}>
+              {[{ id: 'personal', label: 'ส่วนตัว' }, { id: 'family', label: '🏡 กองกลาง' }].map(a => (
+                <button key={a.id} onClick={() => setAccount(a.id)} style={{
+                  padding: '5px 10px', borderRadius: 100, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, border: 'none',
+                  background: account === a.id ? (a.id === 'family' ? FA : CC.walnut) : 'transparent',
+                  color: account === a.id ? '#fff' : CC.ink2, transition: 'all 0.2s',
+                }}>{a.label}</button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -275,6 +348,12 @@ export function ReportsScreen({ txns, familyTxns = [] }) {
               <div style={{ fontSize: 14, fontWeight: 700, fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', color: t.amt > 0 ? CC.moss : CC.ink, flexShrink: 0 }}>
                 {t.amt > 0 ? '+' : '−'}฿{Math.abs(t.amt).toLocaleString('th-TH')}
               </div>
+              {!editLocked && (
+                <div style={{ display: 'flex', gap: 4, marginLeft: 8, flexShrink: 0 }}>
+                  <button onClick={() => openEdit(t)} style={{ width: 30, height: 30, borderRadius: 10, border: `1px solid ${CC.border}`, background: CC.surface, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✏️</button>
+                  <button onClick={() => setSelectedTxn(t)} style={{ width: 30, height: 30, borderRadius: 10, border: 'none', background: CC.emberSoft, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🗑️</button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -282,5 +361,100 @@ export function ReportsScreen({ txns, familyTxns = [] }) {
 
       <div style={{ height: 40 }} />
     </div>
+
+    {/* Transaction detail / edit sheet */}
+    {selectedTxn && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(42,31,18,0.55)', display: 'flex', alignItems: 'flex-end' }}
+        onClick={closeSheet}>
+        <div style={{ width: '100%', background: CC.bg, borderRadius: '24px 24px 0 0', padding: '20px 20px 40px', maxHeight: '85vh', overflowY: 'auto' }}
+          onClick={e => e.stopPropagation()}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+            <button onClick={closeSheet}
+              style={{ background: CC.surface, border: `1px solid ${CC.border}`, borderRadius: 20, width: 32, height: 32, fontSize: 18, color: CC.walnut, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT }}>
+              ×
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 16, background: selectedTxn.amt > 0 ? CC.mossSoft : CC.amberSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>{selectedTxn.ic}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 17, fontWeight: 700, fontFamily: DISPLAY }}>{selectedTxn.label}</div>
+              <div style={{ fontSize: 12, color: CC.walnut, marginTop: 2 }}>{selectedTxn.cat} · {selectedTxn.time}</div>
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 700, fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', color: selectedTxn.amt > 0 ? CC.moss : CC.ember }}>
+              {selectedTxn.amt > 0 ? '+' : '−'}฿{Math.abs(selectedTxn.amt).toLocaleString('th-TH')}
+            </div>
+          </div>
+
+          {!editMode ? (
+            <>
+              {selectedTxn.note && (
+                <div style={{ background: CC.surface, borderRadius: 14, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: CC.ink }}>
+                  📝 {selectedTxn.note}
+                </div>
+              )}
+              <button
+                onClick={async () => {
+                  if (deleting) return
+                  setDeleting(true)
+                  await (account === 'family' ? onDeleteFamilyTxn?.(selectedTxn) : onDeleteTxn?.(selectedTxn))
+                  setDeleting(false)
+                  closeSheet()
+                }}
+                disabled={deleting}
+                style={{ width: '100%', padding: '13px', borderRadius: 16, border: 'none', background: CC.emberSoft, color: CC.ember, fontSize: 14, fontWeight: 700, cursor: deleting ? 'default' : 'pointer', fontFamily: FONT }}>
+                {deleting ? '⏳ กำลังลบ...' : '🗑️ ลบรายการนี้'}
+              </button>
+            </>
+          ) : (
+            <>
+              {selectedTxn.amt < 0 && selectedTxn.cat !== 'รับเข้า' && (
+                <>
+                  <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>หมวดหมู่</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 5, marginBottom: 12 }}>
+                    {CATS.map(c => {
+                      const on = c.id === editCat
+                      return (
+                        <button key={c.id} onClick={() => setEditCat(c.id)} style={{
+                          aspectRatio: '1', borderRadius: 10, cursor: 'pointer', padding: 0,
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
+                          background: on ? CC.amber : CC.surface,
+                          color: on ? '#fff' : CC.ink,
+                          border: on ? 'none' : `1px solid ${CC.border}`,
+                          fontFamily: FONT,
+                        }}>
+                          <span style={{ fontSize: 15 }}>{c.ic}</span>
+                          <span style={{ fontSize: 8, fontWeight: 500 }}>{c.l}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+              <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>ชื่อรายการ</div>
+              <input type="text" value={editLabel} onChange={e => setEditLabel(e.target.value)} autoFocus
+                style={{ width: '100%', padding: '12px 14px', borderRadius: 14, border: `1.5px solid ${CC.border}`, background: CC.surface, fontSize: 14, fontFamily: FONT, color: CC.ink, boxSizing: 'border-box', outline: 'none', marginBottom: 12 }} />
+              <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>จำนวนเงิน (บาท)</div>
+              <input type="number" value={editAmt} onChange={e => setEditAmt(e.target.value)}
+                style={{ width: '100%', padding: '12px 14px', borderRadius: 14, border: `1.5px solid ${CC.border}`, background: CC.surface, fontSize: 14, fontFamily: FONT, color: CC.ink, boxSizing: 'border-box', outline: 'none', marginBottom: 12, fontVariantNumeric: 'tabular-nums' }} />
+              <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>หมายเหตุ</div>
+              <input type="text" value={editNote} onChange={e => setEditNote(e.target.value)} placeholder="(ไม่มี)"
+                style={{ width: '100%', padding: '12px 14px', borderRadius: 14, border: `1.5px solid ${CC.border}`, background: CC.surface, fontSize: 14, fontFamily: FONT, color: CC.ink, boxSizing: 'border-box', outline: 'none', marginBottom: 14 }} />
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={() => setEditMode(false)}
+                  style={{ flex: 1, padding: '13px', borderRadius: 16, border: `1px solid ${CC.border}`, background: CC.surface, color: CC.walnut, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>
+                  ยกเลิก
+                </button>
+                <button onClick={handleSave} disabled={saving}
+                  style={{ flex: 1, padding: '13px', borderRadius: 16, border: 'none', background: CC.walnut, color: '#fff', fontSize: 14, fontWeight: 700, cursor: saving ? 'default' : 'pointer', fontFamily: FONT }}>
+                  {saving ? 'กำลังบันทึก...' : '💾 บันทึก'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    )}
+    </>
   )
 }
