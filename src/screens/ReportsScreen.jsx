@@ -21,8 +21,26 @@ const CATS = [
   { id: 'other',       ic: '🗂️', l: 'อื่นๆ' },
 ]
 
-const COLORS = { 'อาหาร': CC.amber, 'เดินทาง': CC.moss, 'ช้อป': CC.walnut, 'บ้าน': '#A89968', 'อื่นๆ': CC.ember, 'กาแฟ': CC.ember, 'สาธารณูปโภค': '#7B9EA6', 'สุขภาพ': '#A06B8A', 'ซื้อของ': CC.walnut }
-const ICONS  = { 'อาหาร': '🍜', 'เดินทาง': '🚇', 'ช้อป': '🛍️', 'บ้าน': '🏠', 'อื่นๆ': '✨', 'กาแฟ': '☕', 'สาธารณูปโภค': '💡', 'สุขภาพ': '💊', 'ซื้อของ': '🛍️' }
+const COLORS = {
+  'อาหาร':       CC.amber,
+  'กาแฟ':        '#8B5A3C',
+  'เดินทาง':     CC.moss,
+  'ช้อป':        CC.walnut,
+  'บ้าน':        '#A89968',
+  'บันเทิง':     '#B07AA1',
+  'ท่องเที่ยว':   '#5C8AA6',
+  'สุขภาพ':      '#A06B8A',
+  'ความงาม':    '#D08AA0',
+  'ของขวัญ':    '#C8924A',
+  'สะดวกซื้อ':   '#88A06B',
+  'เครื่องดื่ม':   '#7BA8C4',
+  'ศึกษา':       '#7A6BA0',
+  'bill&fees':   '#9B8A6B',
+  'อื่นๆ':        CC.ink2,
+  'สาธารณูปโภค': '#7B9EA6',
+  'ซื้อของ':      CC.walnut,
+}
+const ICONS = Object.fromEntries(CATS.map(c => [c.l, c.ic]))
 
 const MONTH_LONG = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม']
 const MONTH_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
@@ -138,9 +156,13 @@ export function ReportsScreen({ txns, familyTxns = [], onEditTxn, onDeleteTxn, o
   const totalIn  = filtered.filter(t => t.amt > 0).reduce((s, t) => s + t.amt, 0)
 
   const byCat = {}
-  expenses.forEach(t => { byCat[t.cat] = (byCat[t.cat] || 0) + Math.abs(t.amt) })
+  const icByCat = {}
+  expenses.forEach(t => {
+    byCat[t.cat] = (byCat[t.cat] || 0) + Math.abs(t.amt)
+    if (!icByCat[t.cat] && t.ic) icByCat[t.cat] = t.ic
+  })
   const cats = Object.entries(byCat)
-    .map(([l, amt]) => ({ l, amt, pct: Math.round((amt / totalOut) * 100), color: COLORS[l] || CC.ink2, ic: ICONS[l] || '✨' }))
+    .map(([l, amt]) => ({ l, amt, pct: Math.round((amt / totalOut) * 100), color: COLORS[l] || CC.ink2, ic: icByCat[l] || ICONS[l] || '🗂️' }))
     .sort((a, b) => b.amt - a.amt)
 
   let acc = 0
