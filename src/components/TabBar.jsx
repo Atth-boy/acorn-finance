@@ -30,23 +30,45 @@ function HouseIcon({ size = 28, color = '#fff' }) {
   )
 }
 
-export function TabBar({ active, onChange, onAdd, walletSubPage = 0, onFamilyAdd }) {
-  const isShared = active === 'wallets' && walletSubPage === 1
-  const isFamily = active === 'wallets' && walletSubPage === 2
+function Briefcase({ size = 28, color = '#fff', accent = '#E8D4B0' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      <path d="M 12 8 L 12 6.5 Q 12 5 13.5 5 L 18.5 5 Q 20 5 20 6.5 L 20 8"
+        stroke={color} strokeWidth="2" fill="none" strokeLinecap="round"/>
+      <rect x="5" y="9" width="22" height="16" rx="2.5" fill={color}/>
+      <rect x="5" y="15" width="22" height="1.5" fill={accent} opacity="0.55"/>
+      <rect x="13.5" y="14" width="5" height="3.5" rx="0.6" fill={accent}/>
+      <circle cx="16" cy="15.75" r="0.7" fill={color}/>
+    </svg>
+  )
+}
+
+export function TabBar({ active, onChange, onAdd, walletSubPage = 0, onFamilyAdd, onBusinessAdd }) {
+  const isShared   = active === 'wallets' && walletSubPage === 1
+  const isFamily   = active === 'wallets' && walletSubPage === 2
+  const isBusiness = active === 'wallets' && walletSubPage === 3
 
   const fabBottom = isShared
     ? 'calc(var(--sab) + 8px)'
     : 'calc(56px + var(--sab))'
 
   const fabBg = isShared ? '#4A6B2A'
-    : isFamily ? '#7B4A1A'
+    : isFamily   ? '#7B4A1A'
+    : isBusiness ? '#3A5666'
     : CC.walnut
 
   const fabShadow = isShared
     ? '0 8px 22px rgba(74,107,42,0.4)'
     : isFamily
     ? '0 8px 22px rgba(123,74,26,0.5)'
+    : isBusiness
+    ? '0 8px 22px rgba(58,86,102,0.5)'
     : '0 8px 22px rgba(122,79,42,0.5)'
+
+  const fabClick = isShared ? undefined
+    : isFamily   ? onFamilyAdd
+    : isBusiness ? onBusinessAdd
+    : onAdd
 
   return (
     <>
@@ -82,7 +104,7 @@ export function TabBar({ active, onChange, onAdd, walletSubPage = 0, onFamilyAdd
       </div>
 
       <button
-        onClick={isShared ? undefined : isFamily ? onFamilyAdd : onAdd}
+        onClick={fabClick}
         style={{
           position: 'absolute',
           bottom: fabBottom,
@@ -100,6 +122,8 @@ export function TabBar({ active, onChange, onAdd, walletSubPage = 0, onFamilyAdd
       >
         {isFamily
           ? <HouseIcon size={28} color="#E8D0B0" />
+          : isBusiness
+          ? <Briefcase size={28} color="#FBF6E9" accent="#E8D4B0" />
           : <Acorn size={28} color={isShared ? '#A8D890' : CC.amberSoft} />
         }
       </button>

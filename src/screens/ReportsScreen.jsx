@@ -21,6 +21,26 @@ const CATS = [
   { id: 'other',       ic: '🗂️', l: 'อื่นๆ' },
 ]
 
+const BIZ_INCOME_CATS = [
+  { id: 'sales',    ic: '🛍️', l: 'ขายสินค้า' },
+  { id: 'service',  ic: '🤝', l: 'บริการ' },
+  { id: 'shipping', ic: '📦', l: 'ค่าจัดส่ง' },
+  { id: 'other_in', ic: '✨', l: 'อื่นๆ' },
+]
+const BIZ_EXPENSE_CATS = [
+  { id: 'stock',     ic: '📦', l: 'สต๊อกสินค้า' },
+  { id: 'marketing', ic: '📢', l: 'การตลาด' },
+  { id: 'rent',      ic: '🏢', l: 'ค่าเช่า' },
+  { id: 'salary',    ic: '👥', l: 'เงินเดือน' },
+  { id: 'other_out', ic: '⚡', l: 'อื่นๆ' },
+  { id: 'packaging', ic: '🎁', l: 'บรรจุภัณฑ์' },
+  { id: 'logistics', ic: '🚚', l: 'ขนส่ง' },
+  { id: 'equipment', ic: '🖨️', l: 'อุปกรณ์' },
+  { id: 'fees',      ic: '💳', l: 'ค่าธรรมเนียม' },
+  { id: 'tax',       ic: '📋', l: 'ภาษี' },
+  { id: 'utility',   ic: '💡', l: 'สาธารณูปโภค' },
+]
+
 const COLORS = {
   'อาหาร':       CC.amber,
   'กาแฟ':        '#8B5A3C',
@@ -39,8 +59,21 @@ const COLORS = {
   'อื่นๆ':        CC.ink2,
   'สาธารณูปโภค': '#7B9EA6',
   'ซื้อของ':      CC.walnut,
+  // Business
+  'ขายสินค้า':    '#D4A55C',
+  'บริการ':       '#B07A3A',
+  'ค่าจัดส่ง':     '#C8924A',
+  'สต๊อกสินค้า':  '#3A5666',
+  'การตลาด':     '#5C8AA6',
+  'ค่าเช่า':       '#456644',
+  'เงินเดือน':    '#7A6BA0',
+  'บรรจุภัณฑ์':   '#A06B8A',
+  'ขนส่ง':       '#88A06B',
+  'อุปกรณ์':     '#7B9EA6',
+  'ค่าธรรมเนียม': '#9B8A6B',
+  'ภาษี':        '#A8482E',
 }
-const ICONS = Object.fromEntries(CATS.map(c => [c.l, c.ic]))
+const ICONS = Object.fromEntries([...CATS, ...BIZ_INCOME_CATS, ...BIZ_EXPENSE_CATS].map(c => [c.l, c.ic]))
 
 const MONTH_LONG = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม']
 const MONTH_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
@@ -92,9 +125,10 @@ function getHeading(id, date) {
 }
 
 const FA = '#C8920A'
+const BZ = '#3A5666'
 const today = new Date()
 
-export function ReportsScreen({ txns, familyTxns = [], onEditTxn, onDeleteTxn, onEditFamilyTxn, onDeleteFamilyTxn }) {
+export function ReportsScreen({ txns, familyTxns = [], businessTxns = [], onEditTxn, onDeleteTxn, onEditFamilyTxn, onDeleteFamilyTxn, onEditBusinessTxn, onDeleteBusinessTxn }) {
   const [period,       setPeriod]       = useState('month')
   const [account,      setAccount]      = useState('personal')
   const [selectedDate, setSelectedDate] = useState(new Date())
@@ -112,20 +146,28 @@ export function ReportsScreen({ txns, familyTxns = [], onEditTxn, onDeleteTxn, o
 
   const closeSheet = () => { setSelectedTxn(null); setEditMode(false) }
 
+  const editCatList = account === 'business'
+    ? (selectedTxn?.amt < 0 ? BIZ_EXPENSE_CATS : BIZ_INCOME_CATS)
+    : CATS
+
   const openEdit = (t) => {
     setSelectedTxn(t)
     setEditLabel(t.label)
     setEditNote(t.note || '')
     setEditAmt(Math.abs(t.amt).toString())
-    setEditCat(CATS.find(c => c.l === t.cat)?.id || 'other')
+    const list = account === 'business'
+      ? (t.amt < 0 ? BIZ_EXPENSE_CATS : BIZ_INCOME_CATS)
+      : CATS
+    setEditCat(list.find(c => c.l === t.cat)?.id || (list[list.length - 1]?.id || 'other'))
     setEditMode(true)
   }
 
   const handleDelete = async (t) => {
     if (deleting) return
     setDeleting(true)
-    if (account === 'family') await onDeleteFamilyTxn?.(t)
-    else await onDeleteTxn?.(t)
+    if (account === 'family')        await onDeleteFamilyTxn?.(t)
+    else if (account === 'business') await onDeleteBusinessTxn?.(t)
+    else                              await onDeleteTxn?.(t)
     setDeleting(false)
     closeSheet()
   }
@@ -136,17 +178,20 @@ export function ReportsScreen({ txns, familyTxns = [], onEditTxn, onDeleteTxn, o
     const absAmt = parseFloat(editAmt) || 0
     if (absAmt <= 0) { setSaving(false); return }
     const newAmt = selectedTxn.amt >= 0 ? absAmt : -absAmt
-    const catObj = CATS.find(c => c.id === editCat)
-    const updatedCat = (selectedTxn.amt < 0 && catObj) ? catObj.l : selectedTxn.cat
-    const updatedIc  = (selectedTxn.amt < 0 && catObj) ? catObj.ic : selectedTxn.ic
+    const catObj = editCatList.find(c => c.id === editCat)
+    // For business, allow category change on both income & expense; for personal/family, expense only (preserve old behavior)
+    const allowCatChange = account === 'business' || (selectedTxn.amt < 0 && catObj)
+    const updatedCat = (allowCatChange && catObj) ? catObj.l : selectedTxn.cat
+    const updatedIc  = (allowCatChange && catObj) ? catObj.ic : selectedTxn.ic
     const updated = { ...selectedTxn, label: editLabel.trim() || selectedTxn.label, note: editNote.trim() || null, amt: newAmt, cat: updatedCat, ic: updatedIc }
-    if (account === 'family') await onEditFamilyTxn?.(updated)
-    else await onEditTxn?.(updated, selectedTxn.amt)
+    if (account === 'family')        await onEditFamilyTxn?.(updated)
+    else if (account === 'business') await onEditBusinessTxn?.(updated)
+    else                              await onEditTxn?.(updated, selectedTxn.amt)
     setSaving(false)
     closeSheet()
   }
 
-  const source = account === 'family' ? familyTxns : txns
+  const source = account === 'family' ? familyTxns : account === 'business' ? businessTxns : txns
   const txnDate = (t) => new Date(t.id || Date.now())
 
   const { start, end } = getPeriodRange(period, selectedDate)
@@ -218,10 +263,14 @@ export function ReportsScreen({ txns, familyTxns = [], onEditTxn, onDeleteTxn, o
               )}
             </button>
             <div style={{ display: 'flex', background: CC.surface, border: `1px solid ${CC.border}`, borderRadius: 100, padding: 3, gap: 2 }}>
-              {[{ id: 'personal', label: 'ส่วนตัว' }, { id: 'family', label: '🏡 กองกลาง' }].map(a => (
+              {[
+                { id: 'personal', label: 'ส่วนตัว',     tone: CC.walnut },
+                { id: 'family',   label: '🏡 กองกลาง', tone: FA },
+                { id: 'business', label: '💼 ธุรกิจ',   tone: BZ },
+              ].map(a => (
                 <button key={a.id} onClick={() => setAccount(a.id)} style={{
-                  padding: '5px 10px', borderRadius: 100, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, border: 'none',
-                  background: account === a.id ? (a.id === 'family' ? FA : CC.walnut) : 'transparent',
+                  padding: '5px 8px', borderRadius: 100, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, border: 'none',
+                  background: account === a.id ? a.tone : 'transparent',
                   color: account === a.id ? '#fff' : CC.ink2, transition: 'all 0.2s',
                 }}>{a.label}</button>
               ))}
@@ -451,17 +500,18 @@ export function ReportsScreen({ txns, familyTxns = [], onEditTxn, onDeleteTxn, o
             </>
           ) : (
             <>
-              {selectedTxn.amt < 0 && selectedTxn.cat !== 'รับเข้า' && (
+              {(account === 'business' || (selectedTxn.amt < 0 && selectedTxn.cat !== 'รับเข้า')) && (
                 <>
                   <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>หมวดหมู่</div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 5, marginBottom: 12 }}>
-                    {CATS.map(c => {
+                    {editCatList.map(c => {
                       const on = c.id === editCat
+                      const onBg = account === 'business' ? BZ : CC.amber
                       return (
                         <button key={c.id} onClick={() => setEditCat(c.id)} style={{
                           aspectRatio: '1', borderRadius: 10, cursor: 'pointer', padding: 0,
                           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
-                          background: on ? CC.amber : CC.surface,
+                          background: on ? onBg : CC.surface,
                           color: on ? '#fff' : CC.ink,
                           border: on ? 'none' : `1px solid ${CC.border}`,
                           fontFamily: FONT,

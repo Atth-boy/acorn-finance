@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { updateProfile, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth'
 import { auth } from '../lib/firebase'
 import { familyLib } from '../lib/family'
+import { businessLib } from '../lib/business'
 import { CC, DISPLAY, FONT } from '../tokens'
 import { Squirrel } from '../components/Squirrel'
 
-export function SettingsScreen({ txns, user, onSignOut, onReset, onResetAll, rooms = [], onLeaveRoom, familyData, onLeaveFamily, onUserRefresh }) {
+export function SettingsScreen({ txns, user, onSignOut, onReset, onResetAll, rooms = [], onLeaveRoom, familyData, onLeaveFamily, businessData, onLeaveBusiness, onUserRefresh }) {
   // Section 1 — profile
   const [editingName, setEditingName] = useState(false)
   const [newName,     setNewName]     = useState('')
@@ -17,6 +18,10 @@ export function SettingsScreen({ txns, user, onSignOut, onReset, onResetAll, roo
   // Section 3 — family
   const [showLeaveFamily,  setShowLeaveFamily]  = useState(false)
   const [leavingFamily,    setLeavingFamily]    = useState(false)
+
+  // Section 3b — business
+  const [showLeaveBusiness, setShowLeaveBusiness] = useState(false)
+  const [leavingBusiness,   setLeavingBusiness]   = useState(false)
 
   // Section 4 — password
   const [showPwd,    setShowPwd]    = useState(false)
@@ -36,6 +41,8 @@ export function SettingsScreen({ txns, user, onSignOut, onReset, onResetAll, roo
   const username         = user?.email?.replace('@acorn.app', '') || ''
   const familyMemberCount = familyData?.members?.length ?? 0
   const isFamilyLast     = familyMemberCount <= 1
+  const businessMemberCount = businessData?.members?.length ?? 0
+  const isBusinessLast      = businessMemberCount <= 1
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -73,6 +80,21 @@ export function SettingsScreen({ txns, user, onSignOut, onReset, onResetAll, roo
     } catch {}
     setLeavingFamily(false)
     setShowLeaveFamily(false)
+  }
+
+  const handleLeaveBusiness = async () => {
+    if (leavingBusiness) return
+    setLeavingBusiness(true)
+    try {
+      if (isBusinessLast) {
+        await businessLib.deleteBusiness(businessData.code, user.uid)
+      } else {
+        await businessLib.leaveBusiness(businessData.code, user.uid)
+      }
+      onLeaveBusiness?.()
+    } catch {}
+    setLeavingBusiness(false)
+    setShowLeaveBusiness(false)
   }
 
   const handleChangePassword = async () => {
@@ -187,6 +209,31 @@ export function SettingsScreen({ txns, user, onSignOut, onReset, onResetAll, roo
               </div>
               <button
                 onClick={() => setShowLeaveFamily(true)}
+                style={{ padding: '6px 14px', borderRadius: 10, border: 'none', background: CC.emberSoft, color: CC.ember, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, flexShrink: 0 }}>
+                ออก
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── 3b. คลังธุรกิจ ── */}
+      <div style={{ padding: '16px 20px 0' }}>
+        <div style={sectionLabel}>คลังธุรกิจ</div>
+        <div style={{ background: CC.surface, borderRadius: 24, border: `1px solid ${CC.border}`, padding: '16px 18px' }}>
+          {!businessData ? (
+            <div style={{ textAlign: 'center', color: CC.walnut, fontSize: 13 }}>
+              ยังไม่ได้เปิดคลังธุรกิจ
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 12, background: '#D2DAE0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>💼</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{businessData.name || 'คลังธุรกิจ'}</div>
+                <div style={{ fontSize: 11, color: CC.walnut, marginTop: 2 }}>{businessMemberCount} หุ้นส่วน · #{businessData.code}</div>
+              </div>
+              <button
+                onClick={() => setShowLeaveBusiness(true)}
                 style={{ padding: '6px 14px', borderRadius: 10, border: 'none', background: CC.emberSoft, color: CC.ember, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, flexShrink: 0 }}>
                 ออก
               </button>
@@ -311,6 +358,28 @@ export function SettingsScreen({ txns, user, onSignOut, onReset, onResetAll, roo
               {leavingFamily ? 'กำลังดำเนินการ...' : isFamilyLast ? '🗑️ ลบกองกลาง' : '🚪 ออกจากกองกลาง'}
             </button>
             <button onClick={() => setShowLeaveFamily(false)} style={btnGhost}>ยกเลิก</button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal — ยืนยันออกจากคลังธุรกิจ */}
+      {showLeaveBusiness && (
+        <div style={overlay} onClick={() => setShowLeaveBusiness(false)}>
+          <div style={sheet} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 32, textAlign: 'center', marginBottom: 8 }}>💼</div>
+            <div style={{ fontSize: 17, fontWeight: 700, fontFamily: DISPLAY, textAlign: 'center', marginBottom: 10 }}>
+              {isBusinessLast ? 'ลบคลังธุรกิจ?' : 'ออกจากคลังธุรกิจ?'}
+            </div>
+            <div style={{ fontSize: 13, color: CC.walnut, textAlign: 'center', lineHeight: 1.7, marginBottom: 4 }}>
+              {isBusinessLast
+                ? 'คุณเป็นหุ้นส่วนคนสุดท้าย การออกจะเป็นการลบคลังนี้ถาวร (ข้อมูลรายรับ–รายจ่ายทั้งหมดจะหายไป)'
+                : 'คลังยังคงอยู่สำหรับหุ้นส่วนคนอื่น คุณสามารถเข้าร่วมใหม่ได้ภายหลัง'
+              }
+            </div>
+            <button onClick={handleLeaveBusiness} disabled={leavingBusiness} style={{ ...btnPri, background: CC.ember, opacity: leavingBusiness ? 0.6 : 1 }}>
+              {leavingBusiness ? 'กำลังดำเนินการ...' : isBusinessLast ? '🗑️ ลบคลังนี้' : '🚪 ออกจากคลัง'}
+            </button>
+            <button onClick={() => setShowLeaveBusiness(false)} style={btnGhost}>ยกเลิก</button>
           </div>
         </div>
       )}

@@ -17,6 +17,38 @@ const FAMILY_CATS  = [
   { id: 'other',  ic: '🎁', l: 'อื่นๆ' },
 ]
 
+// Business palette (slate + brass)
+const CCB = {
+  slate:     '#3A5666',
+  slateDeep: '#243845',
+  slateSoft: '#D2DAE0',
+  brass:     '#B07A3A',
+  brassSoft: '#E8D4B0',
+  gold:      '#D4A55C',
+  goldSoft:  '#F1DFB8',
+  ledger:    '#456644',
+}
+
+const BIZ_INCOME_CATS = [
+  { id: 'sales',    ic: '🛍️', l: 'ขายสินค้า',  color: CCB.gold },
+  { id: 'service',  ic: '🤝', l: 'บริการ',     color: CCB.brass },
+  { id: 'shipping', ic: '📦', l: 'ค่าจัดส่ง',   color: '#C8924A' },
+  { id: 'other_in', ic: '✨', l: 'อื่นๆ',       color: '#8B5A3C' },
+]
+const BIZ_EXPENSE_CATS = [
+  { id: 'stock',     ic: '📦', l: 'สต๊อกสินค้า' },
+  { id: 'marketing', ic: '📢', l: 'การตลาด' },
+  { id: 'rent',      ic: '🏢', l: 'ค่าเช่า' },
+  { id: 'salary',    ic: '👥', l: 'เงินเดือน' },
+  { id: 'other_out', ic: '⚡', l: 'อื่นๆ' },
+  { id: 'packaging', ic: '🎁', l: 'บรรจุภัณฑ์' },
+  { id: 'logistics', ic: '🚚', l: 'ขนส่ง' },
+  { id: 'equipment', ic: '🖨️', l: 'อุปกรณ์' },
+  { id: 'fees',      ic: '💳', l: 'ค่าธรรมเนียม' },
+  { id: 'tax',       ic: '📋', l: 'ภาษี' },
+  { id: 'utility',   ic: '💡', l: 'สาธารณูปโภค' },
+]
+
 function daysUntilDate(isoDate) {
   const due = new Date(isoDate); due.setHours(0,0,0,0)
   const now = new Date();        now.setHours(0,0,0,0)
@@ -142,8 +174,66 @@ function AcornJar({ acorns, w = 110, h = 130 }) {
   )
 }
 
+function AcornBarrel({ acorns, w = 120, h = 140 }) {
+  const positions = []
+  const layout = [[0,1,2,3,4],[0,1,2,3],[0,1,2,3,4],[0,1,2,3],[0,1,2,3,4]]
+  const colW = 14, rowH = 14
+  let idx = 0
+  layout.forEach((row, ri) => {
+    const offset = (ri % 2) * 7
+    row.forEach(c => {
+      if (idx < acorns.length) {
+        positions.push({ x: 22 + c * colW + offset, y: h - 30 - ri * rowH, cat: acorns[idx] })
+        idx++
+      }
+    })
+  })
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+      <defs>
+        <linearGradient id="bzBarrelG" x1="0" x2="1">
+          <stop offset="0" stopColor="#7A4F2A"/>
+          <stop offset="0.5" stopColor="#A87446"/>
+          <stop offset="1" stopColor="#5A3A20"/>
+        </linearGradient>
+        <linearGradient id="bzBarrelTop" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stopColor="#3A2818"/>
+          <stop offset="1" stopColor="#5A3A20"/>
+        </linearGradient>
+      </defs>
+      <path d={`M 28 22 Q 18 30 18 ${h/2 + 6} Q 18 ${h - 14} 30 ${h - 8} L 100 ${h - 8} Q 112 ${h - 14} 112 ${h/2 + 6} Q 112 30 102 22 Z`}
+        fill="url(#bzBarrelG)" stroke="#3A2818" strokeWidth="1.5"/>
+      {[36, 50, 64, 78, 92].map((x, i) => (
+        <line key={i} x1={x} y1="24" x2={x} y2={h - 10} stroke="#3A2818" strokeWidth="0.7" opacity="0.4"/>
+      ))}
+      <rect x="16" y="32" width="98" height="6" fill="#2A2620" stroke="#1A1410" strokeWidth="0.5"/>
+      <rect x="16" y={h - 32} width="98" height="6" fill="#2A2620" stroke="#1A1410" strokeWidth="0.5"/>
+      <rect x="18" y="32" width="98" height="2" fill="#888" opacity="0.5"/>
+      <rect x="18" y={h - 32} width="98" height="2" fill="#888" opacity="0.5"/>
+      <ellipse cx="65" cy="22" rx="38" ry="10" fill="url(#bzBarrelTop)"/>
+      {positions.map((p, i) => (
+        <g key={i} transform={`translate(${p.x}, ${p.y}) rotate(${(i*43)%30 - 15})`}>
+          <ellipse cx="0" cy="2" rx="5" ry="6" fill={p.cat.color || CCB.gold}/>
+          <ellipse cx="0" cy="-3" rx="6" ry="3" fill="#5a3d20"/>
+          <line x1="0" y1="-7" x2="0" y2="-9" stroke="#5a3d20" strokeWidth="1.2" strokeLinecap="round"/>
+          <ellipse cx="-1.5" cy="2" rx="1.5" ry="2.5" fill="#fff" opacity="0.35"/>
+        </g>
+      ))}
+      <rect x="38" y={h/2 - 4} width="54" height="14" rx="2" fill={CCB.brass} stroke="#5A3A20" strokeWidth="0.8"/>
+      <text x="65" y={h/2 + 5} textAnchor="middle" fontSize="8" fill="#FBF6E9" fontFamily="serif" fontStyle="italic" fontWeight="600">BUSINESS</text>
+      <path d={`M 22 30 Q 20 50 22 ${h/2}`} stroke="#FBF6E9" strokeWidth="1.5" fill="none" opacity="0.25" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
 // ─── Main component ───────────────────────────────────────────────────────
-export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal, onUpsertWallet, onDeleteWallet, onSaveFixed, onDeleteFixed, familyData, familyTxns = [], onEditFamilyTxn, onDeleteFamilyTxn, onCreateFamily, onJoinFamily, onPageChange, rooms = [], onCreateRoom, onJoinRoom, onAddRoomTxn }) {
+export function WalletsScreen({
+  wallets, fixedExpenses, goal = 750000, onSetGoal, onUpsertWallet, onDeleteWallet, onSaveFixed, onDeleteFixed,
+  familyData, familyTxns = [], onEditFamilyTxn, onDeleteFamilyTxn, onCreateFamily, onJoinFamily,
+  businessData, businessTxns = [], onEditBusinessTxn, onDeleteBusinessTxn, onCreateBusiness, onJoinBusiness,
+  onPageChange,
+  rooms = [], onCreateRoom, onJoinRoom, onAddRoomTxn,
+}) {
   const scrollRef = useRef(null)
   const [page, setPage] = useState(0)
 
@@ -204,6 +294,25 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
   const [fSaving,        setFSaving]        = useState(false)
   const [fDeleting,      setFDeleting]      = useState(false)
   const [fEditCat,       setFEditCat]       = useState('other')
+
+  // Business Pool state
+  const [showBusinessSetup,  setShowBusinessSetup]  = useState(false)
+  const [showJoinBusiness,   setShowJoinBusiness]   = useState(false)
+  const [showCreateBusiness, setShowCreateBusiness] = useState(false)
+  const [newBizName,         setNewBizName]         = useState('')
+  const [joinBizCode,        setJoinBizCode]        = useState('')
+  const [joinBizErr,         setJoinBizErr]         = useState('')
+  const [joiningBiz,         setJoiningBiz]         = useState(false)
+  const [creatingBiz,        setCreatingBiz]        = useState(false)
+  const [copiedBiz,          setCopiedBiz]          = useState(false)
+  const [selBizTxn,          setSelBizTxn]          = useState(null)
+  const [bEditMode,          setBEditMode]          = useState(false)
+  const [bEditLabel,         setBEditLabel]         = useState('')
+  const [bEditAmt,           setBEditAmt]           = useState('')
+  const [bEditNote,          setBEditNote]          = useState('')
+  const [bEditCat,           setBEditCat]           = useState('stock')
+  const [bSaving,            setBSaving]            = useState(false)
+  const [bDeleting,          setBDeleting]          = useState(false)
 
   useEffect(() => {
     roomTxnUnsubRef.current?.()
@@ -338,6 +447,66 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
     setCopiedFamily(true); setTimeout(() => setCopiedFamily(false), 1500)
   }
 
+  // Business Pool handlers
+  const businessCode = businessData?.code ?? ''
+  const businessName = businessData?.name || 'คลังธุรกิจ'
+  const bizMembers   = (businessData?.members ?? []).map((m, i) => ({
+    ...m, bg: MEMBER_COLORS[i % MEMBER_COLORS.length],
+  }))
+  const bizRevenue   = businessTxns.filter(t => t.amt > 0).reduce((s, t) => s + t.amt, 0)
+  const bizExpense   = businessTxns.filter(t => t.amt < 0).reduce((s, t) => s + Math.abs(t.amt), 0)
+  const bizNetProfit = bizRevenue - bizExpense
+
+  // Aggregate revenue by category (with color from BIZ_INCOME_CATS)
+  const bizRevByCat = {}
+  businessTxns.filter(t => t.amt > 0).forEach(t => {
+    if (!bizRevByCat[t.cat]) bizRevByCat[t.cat] = { l: t.cat, ic: t.ic, amt: 0 }
+    bizRevByCat[t.cat].amt += t.amt
+  })
+  const bizRevList = Object.values(bizRevByCat)
+    .map(c => {
+      const cfg = BIZ_INCOME_CATS.find(x => x.l === c.l)
+      return { ...c, color: cfg?.color || '#8B5A3C', share: bizRevenue ? c.amt / bizRevenue : 0 }
+    })
+    .sort((a, b) => b.amt - a.amt)
+  const barrelAcorns = (() => {
+    const acorns = []
+    bizRevList.forEach(c => {
+      const n = Math.max(1, Math.round(c.share * 22))
+      for (let i = 0; i < n; i++) acorns.push(c)
+    })
+    if (acorns.length === 0) for (let i = 0; i < 6; i++) acorns.push({ color: CCB.goldSoft })
+    return acorns
+  })()
+
+  // Aggregate expense by category
+  const bizExpByCat = {}
+  businessTxns.filter(t => t.amt < 0).forEach(t => {
+    if (!bizExpByCat[t.cat]) bizExpByCat[t.cat] = { l: t.cat, ic: t.ic, amt: 0 }
+    bizExpByCat[t.cat].amt += Math.abs(t.amt)
+  })
+  const bizExpList = Object.values(bizExpByCat).sort((a, b) => b.amt - a.amt)
+
+  const handleJoinBizSubmit = async () => {
+    if (!joinBizCode.trim()) return
+    setJoiningBiz(true); setJoinBizErr('')
+    const ok = await onJoinBusiness(joinBizCode)
+    setJoiningBiz(false)
+    if (ok) { setShowJoinBusiness(false); setJoinBizCode('') }
+    else setJoinBizErr('ไม่พบรหัสคลังนี้ กรุณาตรวจสอบอีกครั้ง')
+  }
+  const handleCreateBizSubmit = async () => {
+    setCreatingBiz(true)
+    await onCreateBusiness(newBizName.trim() || 'คลังธุรกิจ')
+    setCreatingBiz(false)
+    setShowCreateBusiness(false)
+    setNewBizName('')
+  }
+  const handleCopyBizCode = () => {
+    navigator.clipboard?.writeText(businessCode).catch(() => {})
+    setCopiedBiz(true); setTimeout(() => setCopiedBiz(false), 1500)
+  }
+
   // Shared styles
   const overlay = { position: 'absolute', inset: 0, zIndex: 100, background: 'rgba(42,31,18,0.55)', display: 'flex', alignItems: 'flex-end' }
   const sheet   = { width: '100%', background: CC.bg, borderRadius: '24px 24px 0 0', padding: '24px 20px 36px' }
@@ -352,10 +521,12 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
 
       {/* Page dots */}
       <div style={{ position: 'absolute', top: 'calc(10px + var(--sat))', left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6, zIndex: 20, pointerEvents: 'none' }}>
-        {[0, 1, 2].map(i => (
+        {[0, 1, 2, 3].map(i => (
           <div key={i} style={{
             width: i === page ? 20 : 6, height: 6, borderRadius: 3, transition: 'all 0.3s',
-            background: i === page ? (page === 1 ? CC.moss : page === 2 ? CC.amber : CC.walnut) : CC.border,
+            background: i === page
+              ? (page === 1 ? CC.moss : page === 2 ? CC.amber : page === 3 ? CCB.slate : CC.walnut)
+              : CC.border,
           }} />
         ))}
       </div>
@@ -696,12 +867,14 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
           {/* Header nav */}
           <div style={{ padding: '0 24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontSize: 13, color: CC.walnut, fontStyle: 'italic' }}>ร่มเงาของเรา</div>
               <button onClick={() => goToPage(1)} style={{ background: CC.surface, border: `1px solid ${CC.border}`, borderRadius: 100, padding: '5px 12px', fontSize: 11, color: CC.walnut, fontFamily: FONT, fontWeight: 600, cursor: 'pointer' }}>
                 ← บัญชีร่วม
               </button>
+              <button onClick={() => goToPage(3)} style={{ background: CC.surface, border: `1px solid ${CC.border}`, borderRadius: 100, padding: '5px 12px', fontSize: 11, color: CCB.slate, fontFamily: FONT, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                💼 คลังธุรกิจ →
+              </button>
             </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 2 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 6 }}>
               <div style={{ fontSize: 28, fontWeight: 700, fontFamily: DISPLAY, letterSpacing: -0.4, color: CC.ink }}>กองกลางครอบครัว</div>
               <span style={{ fontSize: 22 }}>🌳</span>
             </div>
@@ -824,6 +997,208 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
                     <button onClick={handleCopyFamilyCode}
                       style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: CC.walnut, color: '#fff', border: 'none', borderRadius: 10, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>
                       <CopyIcon/> {copiedFamily ? 'คัดลอกแล้ว ✓' : 'คัดลอกรหัส'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          <div style={{ height: 40 }} />
+        </div>
+
+        {/* ══════════════════════════════════════
+            PAGE 3 — BUSINESS POOL
+        ══════════════════════════════════════ */}
+        <div style={{ minWidth: '100%', scrollSnapAlign: 'start', overflowY: 'auto', height: '100%', background: CC.bg, backgroundImage: PAPER, backgroundBlendMode: 'multiply', paddingBottom: 110 }}>
+          <div style={{ height: 'calc(28px + var(--sat))' }} />
+
+          {/* Header nav */}
+          <div style={{ padding: '0 24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <button onClick={() => goToPage(2)} style={{ background: CC.surface, border: `1px solid ${CC.border}`, borderRadius: 100, padding: '5px 12px', fontSize: 11, color: CC.walnut, fontFamily: FONT, fontWeight: 600, cursor: 'pointer' }}>
+                ← กองครอบครัว
+              </button>
+              <div style={{ fontSize: 13, color: CCB.slate, fontStyle: 'italic' }}>ledger ของเรา</div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
+              <div style={{ fontSize: 28, fontWeight: 700, fontFamily: DISPLAY, letterSpacing: -0.4, color: CC.ink }}>{businessName}</div>
+              <span style={{ fontSize: 22 }}>💼</span>
+            </div>
+          </div>
+
+          {/* Loading */}
+          {businessData === undefined && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, color: CCB.slate, fontSize: 13 }}>
+              กำลังโหลด...
+            </div>
+          )}
+
+          {/* No business yet */}
+          {businessData === null && (
+            <div style={{ padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+              <Squirrel size={110} mood="happy"/>
+              <div style={{ fontSize: 16, fontWeight: 700, fontFamily: DISPLAY, color: CC.ink, textAlign: 'center' }}>ยังไม่มีคลังธุรกิจ</div>
+              <div style={{ fontSize: 13, color: CC.walnut, textAlign: 'center', lineHeight: 1.6, maxWidth: 280 }}>
+                เปิดคลังเพื่อบันทึกรายรับ–รายจ่ายของธุรกิจ แยกจากบัญชีส่วนตัวและกองครอบครัว
+              </div>
+              <button onClick={() => setShowBusinessSetup(true)}
+                style={{ width: '100%', maxWidth: 280, padding: '14px', borderRadius: 18, border: 'none', background: CCB.slate, color: '#fff', fontSize: 15, fontWeight: 700, fontFamily: FONT, cursor: 'pointer', boxShadow: '0 4px 14px rgba(58,86,102,0.35)' }}>
+                💼 เปิดคลังธุรกิจ
+              </button>
+            </div>
+          )}
+
+          {/* Has business */}
+          {businessData && (
+            <>
+              {/* Hero — slate gradient + barrel */}
+              <div style={{ padding: '14px 20px 0' }}>
+                <div style={{ background: `linear-gradient(160deg, ${CCB.slate} 0%, ${CCB.slateDeep} 100%)`, borderRadius: 28, padding: '18px 18px 16px', position: 'relative', overflow: 'hidden', color: '#FBF6E9' }}>
+                  <svg style={{ position: 'absolute', inset: 0, opacity: 0.08, pointerEvents: 'none' }} width="100%" height="100%">
+                    <defs>
+                      <pattern id="bizLedgerGrid" width="22" height="22" patternUnits="userSpaceOnUse">
+                        <path d="M 22 0 L 0 0 0 22" stroke="#FBF6E9" strokeWidth="0.5" fill="none"/>
+                      </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#bizLedgerGrid)"/>
+                  </svg>
+                  <div style={{ position: 'absolute', right: 14, top: 14, fontSize: 9, color: CCB.gold, fontFamily: DISPLAY, letterSpacing: 1, fontWeight: 600, padding: '2px 8px', border: `1px solid ${CCB.gold}`, borderRadius: 4 }}>
+                    LEDGER · #{businessCode}
+                  </div>
+                  <div style={{ display: 'flex', gap: 14, alignItems: 'center', position: 'relative' }}>
+                    <div style={{ flexShrink: 0 }}>
+                      <AcornBarrel acorns={barrelAcorns} w={120} h={140}/>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 11, opacity: 0.75, letterSpacing: 0.8, textTransform: 'uppercase', fontWeight: 600 }}>กำไรสุทธิ</div>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 3, marginTop: 4 }}>
+                        <span style={{ fontSize: 14, opacity: 0.8, fontFamily: DISPLAY }}>{bizNetProfit < 0 ? '−' : ''}฿</span>
+                        <span style={{ fontSize: 30, fontWeight: 700, fontFamily: DISPLAY, letterSpacing: -0.8, fontVariantNumeric: 'tabular-nums', color: bizNetProfit < 0 ? '#E8B086' : CCB.gold }}>
+                          {Math.abs(bizNetProfit).toLocaleString('th-TH')}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                        <div style={{ flex: 1, padding: '8px 10px', background: 'rgba(251,246,233,0.08)', borderRadius: 12, border: '1px solid rgba(251,246,233,0.15)' }}>
+                          <div style={{ fontSize: 9, opacity: 0.7, letterSpacing: 0.5, textTransform: 'uppercase', fontWeight: 600 }}>รายรับ</div>
+                          <div style={{ fontSize: 14, fontWeight: 700, fontFamily: DISPLAY, color: '#A8D08D', marginTop: 1, fontVariantNumeric: 'tabular-nums' }}>+฿{bizRevenue.toLocaleString('th-TH')}</div>
+                        </div>
+                        <div style={{ flex: 1, padding: '8px 10px', background: 'rgba(251,246,233,0.08)', borderRadius: 12, border: '1px solid rgba(251,246,233,0.15)' }}>
+                          <div style={{ fontSize: 9, opacity: 0.7, letterSpacing: 0.5, textTransform: 'uppercase', fontWeight: 600 }}>รายจ่าย</div>
+                          <div style={{ fontSize: 14, fontWeight: 700, fontFamily: DISPLAY, color: '#E8B086', marginTop: 1, fontVariantNumeric: 'tabular-nums' }}>−฿{bizExpense.toLocaleString('th-TH')}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Revenue breakdown */}
+              {bizRevList.length > 0 && (
+                <div style={{ padding: '20px 20px 0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <div style={{ fontSize: 12, color: CC.walnut, letterSpacing: 1, textTransform: 'uppercase', fontWeight: 600 }}>ที่มาของรายรับ</div>
+                  </div>
+                  <div style={{ background: CC.surface, borderRadius: 22, border: `1px solid ${CC.border}`, padding: 18 }}>
+                    <div style={{ display: 'flex', height: 14, borderRadius: 7, overflow: 'hidden', marginBottom: 14, border: `1px solid ${CC.border}` }}>
+                      {bizRevList.map((r, i) => (
+                        <div key={i} style={{ flex: r.share, background: r.color, borderRight: i < bizRevList.length - 1 ? '1px solid rgba(0,0,0,0.08)' : 'none' }}/>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {bizRevList.map((r, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{ width: 32, height: 32, borderRadius: 10, background: r.color, color: '#FBF6E9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{r.ic}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: CC.ink }}>{r.l}</div>
+                            <div style={{ fontSize: 10.5, color: CC.walnut, marginTop: 1 }}>{Math.round(r.share * 100)}% ของรายรับรวม</div>
+                          </div>
+                          <div style={{ fontSize: 14, fontWeight: 700, fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', color: CC.ink }}>฿{r.amt.toLocaleString('th-TH')}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Expense quick view */}
+              {bizExpList.length > 0 && (
+                <div style={{ padding: '14px 20px 0' }}>
+                  <div style={{ background: CC.surface, borderRadius: 18, border: `1px solid ${CC.border}`, padding: '14px 16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <div style={{ fontSize: 12, color: CC.walnut, letterSpacing: 1, textTransform: 'uppercase', fontWeight: 600 }}>หมวดรายจ่าย</div>
+                      <div style={{ fontSize: 11, color: CC.walnut }}>{bizExpList.length} หมวด</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 2 }}>
+                      {bizExpList.map((e, i) => (
+                        <div key={i} style={{ flexShrink: 0, background: CC.bg, borderRadius: 12, padding: '8px 12px', border: `1px solid ${CC.border}`, minWidth: 90 }}>
+                          <div style={{ fontSize: 16 }}>{e.ic}</div>
+                          <div style={{ fontSize: 10.5, color: CC.walnut, marginTop: 2 }}>{e.l}</div>
+                          <div style={{ fontSize: 12, fontWeight: 700, fontFamily: DISPLAY, color: CC.ink, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>฿{e.amt >= 1000 ? `${(e.amt/1000).toFixed(1)}k` : e.amt.toLocaleString('th-TH')}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Members */}
+              <div style={{ padding: '18px 20px 0' }}>
+                <div style={{ fontSize: 12, color: CC.walnut, letterSpacing: 1, textTransform: 'uppercase', fontWeight: 600, marginBottom: 12 }}>หุ้นส่วน · {bizMembers.length} คน</div>
+                <div style={{ background: CC.surface, borderRadius: 20, border: `1px solid ${CC.border}`, padding: '14px 16px' }}>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {bizMembers.map((m, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, background: CC.bg, borderRadius: 100, padding: '5px 10px 5px 5px', border: `1px solid ${CC.border}` }}>
+                        <Avatar name={m.name} bg={m.bg} size={26}/>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: CC.ink }}>{m.name}</div>
+                        {m.isMe && <div style={{ fontSize: 9, color: CC.walnut }}>(ฉัน)</div>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent transactions */}
+              <div style={{ padding: '18px 20px 0' }}>
+                <div style={{ fontSize: 12, color: CC.walnut, letterSpacing: 1, textTransform: 'uppercase', fontWeight: 600, marginBottom: 12 }}>รายการล่าสุด</div>
+                <div style={{ background: CC.surface, borderRadius: 22, border: `1px solid ${CC.border}` }}>
+                  {businessTxns.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '32px 20px', color: CC.walnut }}>
+                      <div style={{ fontSize: 40, marginBottom: 10 }}>💼</div>
+                      <div style={{ fontSize: 13 }}>ยังไม่มีรายการ</div>
+                      <div style={{ fontSize: 11, marginTop: 4, opacity: 0.7 }}>กดปุ่มกระเป๋าด้านล่างเพื่อเพิ่ม</div>
+                    </div>
+                  ) : businessTxns.slice(0, 15).map((t, i) => (
+                    <button key={t._id || i}
+                      onClick={() => { setSelBizTxn(t); setBEditMode(false) }}
+                      style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', borderBottom: i < Math.min(businessTxns.length, 15) - 1 ? `1px solid ${CC.border}` : 'none', gap: 10, width: '100%', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: FONT }}>
+                      <div style={{ width: 38, height: 38, borderRadius: 12, background: t.amt < 0 ? CCB.slateSoft : CCB.brassSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{t.ic}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: CC.ink }}>{t.label}</div>
+                        <div style={{ fontSize: 11, color: CC.walnut, marginTop: 1 }}>
+                          {t.cat} · {t.time}{t.createdByName ? ` · โดย ${t.createdByName}` : ''}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 14, fontWeight: 700, fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', color: t.amt < 0 ? CC.ember : CCB.ledger, flexShrink: 0 }}>
+                        {t.amt > 0 ? '+' : '−'}฿{Math.abs(t.amt).toLocaleString('th-TH')}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Invite partners card */}
+              <div style={{ padding: '18px 20px 0' }}>
+                <div style={{ background: CC.surface, borderRadius: 22, border: `1.5px dashed ${CCB.brass}`, padding: '16px', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', right: -4, bottom: -10, opacity: 0.45 }}>
+                    <Squirrel size={72} mood="wink"/>
+                  </div>
+                  <div style={{ position: 'relative', maxWidth: '72%' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, fontFamily: DISPLAY, color: CC.ink }}>เชิญหุ้นส่วน 💼</div>
+                    <div style={{ fontSize: 11, color: CC.walnut, marginTop: 3, lineHeight: 1.5 }}>แชร์รหัสคลัง <b>{businessCode}</b> ให้หุ้นส่วนหรือนักบัญชี</div>
+                    <button onClick={handleCopyBizCode}
+                      style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: CCB.slate, color: '#fff', border: 'none', borderRadius: 10, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>
+                      <CopyIcon/> {copiedBiz ? 'คัดลอกแล้ว ✓' : 'คัดลอกรหัส'}
                     </button>
                   </div>
                 </div>
@@ -1257,6 +1632,195 @@ export function WalletsScreen({ wallets, fixedExpenses, goal = 750000, onSetGoal
                     disabled={fSaving}
                     style={{ flex: 1, padding: '13px', borderRadius: 16, border: 'none', background: CC.walnut, color: '#fff', fontSize: 14, fontWeight: 700, cursor: fSaving ? 'default' : 'pointer', fontFamily: FONT }}>
                     {fSaving ? 'กำลังบันทึก...' : '💾 บันทึก'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════ MODALS — BUSINESS POOL ══════════════ */}
+
+      {/* Business setup — choice sheet */}
+      {showBusinessSetup && (
+        <div style={overlay} onClick={() => setShowBusinessSetup(false)}>
+          <div style={sheet} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 17, fontWeight: 700, fontFamily: DISPLAY, marginBottom: 6 }}>💼 เปิดคลังธุรกิจ</div>
+            <div style={{ fontSize: 13, color: CC.walnut, marginBottom: 20 }}>เลือกว่าต้องการทำอะไร</div>
+            <button
+              onClick={() => { setShowBusinessSetup(false); setShowJoinBusiness(true); setJoinBizErr('') }}
+              style={{ width: '100%', padding: '16px', borderRadius: 18, border: `1.5px solid ${CC.border}`, background: CC.surface, textAlign: 'left', cursor: 'pointer', fontFamily: FONT, marginBottom: 10 }}>
+              <div style={{ fontSize: 22, marginBottom: 4 }}>🔑</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: CC.ink }}>มีรหัสคลังอยู่แล้ว</div>
+              <div style={{ fontSize: 12, color: CC.walnut, marginTop: 2 }}>กรอกรหัสที่ได้รับจากเจ้าของธุรกิจ</div>
+            </button>
+            <button
+              onClick={() => { setShowBusinessSetup(false); setShowCreateBusiness(true) }}
+              style={{ width: '100%', padding: '16px', borderRadius: 18, border: 'none', background: CCB.slateSoft, textAlign: 'left', cursor: 'pointer', fontFamily: FONT }}>
+              <div style={{ fontSize: 22, marginBottom: 4 }}>💼</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: CC.ink }}>สร้างคลังใหม่</div>
+              <div style={{ fontSize: 12, color: CC.walnut, marginTop: 2 }}>เปิดคลังธุรกิจของคุณ แล้วเชิญหุ้นส่วน</div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Create business modal */}
+      {showCreateBusiness && (
+        <div style={overlay} onClick={() => { setShowCreateBusiness(false); setNewBizName('') }}>
+          <div style={sheet} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 17, fontWeight: 700, fontFamily: DISPLAY, marginBottom: 6 }}>💼 สร้างคลังธุรกิจ</div>
+            <div style={{ fontSize: 13, color: CC.walnut, marginBottom: 16 }}>ตั้งชื่อให้คลังของคุณ</div>
+            <input type="text" value={newBizName} onChange={e => setNewBizName(e.target.value)}
+              placeholder="เช่น ร้านลูกโอ๊ก, Acorn Studio" autoFocus maxLength={30} style={inp} />
+            <button onClick={handleCreateBizSubmit} disabled={creatingBiz}
+              style={{ ...btnPri, background: CCB.slate, opacity: creatingBiz ? 0.6 : 1 }}>
+              {creatingBiz ? 'กำลังสร้าง...' : 'สร้างคลัง'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Join business modal */}
+      {showJoinBusiness && (
+        <div style={overlay} onClick={() => { setShowJoinBusiness(false); setJoinBizCode(''); setJoinBizErr('') }}>
+          <div style={sheet} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 17, fontWeight: 700, fontFamily: DISPLAY, marginBottom: 6 }}>🔑 เข้าร่วมคลังธุรกิจ</div>
+            <div style={{ fontSize: 13, color: CC.walnut, marginBottom: 16 }}>ขอรหัสคลังจากเจ้าของหรือหุ้นส่วน</div>
+            <input
+              type="text"
+              value={joinBizCode}
+              onChange={e => { setJoinBizCode(e.target.value.toUpperCase()); setJoinBizErr('') }}
+              placeholder="รหัสคลัง เช่น BIZ042"
+              maxLength={8}
+              autoFocus
+              style={{ ...inp, fontSize: 22, fontFamily: 'monospace', letterSpacing: 4, textAlign: 'center', textTransform: 'uppercase' }}
+            />
+            {joinBizErr && (
+              <div style={{ marginTop: 8, fontSize: 12, color: CC.ember, textAlign: 'center' }}>{joinBizErr}</div>
+            )}
+            <button
+              onClick={handleJoinBizSubmit}
+              disabled={joiningBiz || !joinBizCode.trim()}
+              style={{ ...btnPri, background: CCB.slate, opacity: joiningBiz || !joinBizCode.trim() ? 0.5 : 1 }}>
+              {joiningBiz ? 'กำลังเข้าร่วม...' : 'เข้าร่วม'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Business transaction detail sheet */}
+      {selBizTxn && (
+        <div style={overlay} onClick={() => { setSelBizTxn(null); setBEditMode(false) }}>
+          <div style={{ ...sheet, maxHeight: '85vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+              <button onClick={() => { setSelBizTxn(null); setBEditMode(false) }}
+                style={{ background: CC.surface, border: `1px solid ${CC.border}`, borderRadius: 20, width: 32, height: 32, fontSize: 18, color: CC.walnut, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: selBizTxn.amt < 0 ? CCB.slateSoft : CCB.brassSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{selBizTxn.ic}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 16, fontWeight: 700, fontFamily: DISPLAY }}>{selBizTxn.label}</div>
+                <div style={{ fontSize: 11, color: CC.walnut, marginTop: 2 }}>{selBizTxn.cat} · {selBizTxn.time}</div>
+                {selBizTxn.createdByName && (
+                  <div style={{ fontSize: 11, color: CC.walnut, marginTop: 1 }}>บันทึกโดย {selBizTxn.createdByName}</div>
+                )}
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 700, fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', color: selBizTxn.amt < 0 ? CC.ember : CCB.ledger }}>
+                {selBizTxn.amt > 0 ? '+' : '−'}฿{Math.abs(selBizTxn.amt).toLocaleString('th-TH')}
+              </div>
+            </div>
+
+            {!bEditMode ? (
+              <>
+                {selBizTxn.note && (
+                  <div style={{ background: CC.surface, borderRadius: 14, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: CC.ink }}>
+                    📝 {selBizTxn.note}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    onClick={() => {
+                      setBEditLabel(selBizTxn.label)
+                      setBEditAmt(Math.abs(selBizTxn.amt).toString())
+                      setBEditNote(selBizTxn.note || '')
+                      const list = selBizTxn.amt < 0 ? BIZ_EXPENSE_CATS : BIZ_INCOME_CATS
+                      setBEditCat(list.find(c => c.l === selBizTxn.cat)?.id || (selBizTxn.amt < 0 ? 'other_out' : 'sales'))
+                      setBEditMode(true)
+                    }}
+                    style={{ flex: 1, padding: '13px', borderRadius: 16, border: `1px solid ${CC.border}`, background: CC.surface, color: CC.ink, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>
+                    ✏️ แก้ไข
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (bDeleting) return
+                      setBDeleting(true)
+                      await onDeleteBusinessTxn?.(selBizTxn)
+                      setBDeleting(false)
+                      setSelBizTxn(null)
+                    }}
+                    disabled={bDeleting}
+                    style={{ flex: 1, padding: '13px', borderRadius: 16, border: 'none', background: CC.emberSoft, color: CC.ember, fontSize: 14, fontWeight: 700, cursor: bDeleting ? 'default' : 'pointer', fontFamily: FONT }}>
+                    {bDeleting ? '⏳ กำลังลบ...' : '🗑️ ลบ'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {(() => {
+                  const list = selBizTxn.amt < 0 ? BIZ_EXPENSE_CATS : BIZ_INCOME_CATS
+                  return (
+                    <>
+                      <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>หมวดหมู่</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 5, marginBottom: 12 }}>
+                        {list.map(c => {
+                          const on = c.id === bEditCat
+                          return (
+                            <button key={c.id} onClick={() => setBEditCat(c.id)} style={{
+                              aspectRatio: '1', borderRadius: 10, cursor: 'pointer', padding: 0,
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
+                              background: on ? CCB.slate : CC.surface,
+                              color: on ? '#fff' : CC.ink,
+                              border: on ? 'none' : `1px solid ${CC.border}`,
+                              fontFamily: FONT,
+                            }}>
+                              <span style={{ fontSize: 15 }}>{c.ic}</span>
+                              <span style={{ fontSize: 8, fontWeight: 500 }}>{c.l}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </>
+                  )
+                })()}
+                <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>ชื่อรายการ</div>
+                <input type="text" value={bEditLabel} onChange={e => setBEditLabel(e.target.value)} autoFocus style={{ ...inp, marginBottom: 12 }} />
+                <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>จำนวนเงิน (บาท)</div>
+                <input type="number" value={bEditAmt} onChange={e => setBEditAmt(e.target.value)} style={{ ...inp, marginBottom: 12, fontVariantNumeric: 'tabular-nums' }} />
+                <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>หมายเหตุ</div>
+                <input type="text" value={bEditNote} onChange={e => setBEditNote(e.target.value)} placeholder="(ไม่มี)" style={{ ...inp, marginBottom: 14 }} />
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button onClick={() => setBEditMode(false)} style={{ flex: 1, padding: '13px', borderRadius: 16, border: `1px solid ${CC.border}`, background: CC.surface, color: CC.walnut, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>ยกเลิก</button>
+                  <button
+                    onClick={async () => {
+                      if (bSaving) return
+                      const absAmt = parseFloat(bEditAmt) || 0
+                      if (absAmt <= 0) return
+                      setBSaving(true)
+                      const newAmt = selBizTxn.amt >= 0 ? absAmt : -absAmt
+                      const list = selBizTxn.amt < 0 ? BIZ_EXPENSE_CATS : BIZ_INCOME_CATS
+                      const catObj = list.find(c => c.id === bEditCat)
+                      const updCat = catObj ? catObj.l : selBizTxn.cat
+                      const updIc  = catObj ? catObj.ic : selBizTxn.ic
+                      await onEditBusinessTxn?.({ ...selBizTxn, label: bEditLabel.trim() || selBizTxn.label, amt: newAmt, note: bEditNote.trim() || null, cat: updCat, ic: updIc })
+                      setBSaving(false)
+                      setSelBizTxn(null)
+                      setBEditMode(false)
+                    }}
+                    disabled={bSaving}
+                    style={{ flex: 1, padding: '13px', borderRadius: 16, border: 'none', background: CCB.slate, color: '#fff', fontSize: 14, fontWeight: 700, cursor: bSaving ? 'default' : 'pointer', fontFamily: FONT }}>
+                    {bSaving ? 'กำลังบันทึก...' : 'บันทึก'}
                   </button>
                 </div>
               </>

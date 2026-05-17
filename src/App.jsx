@@ -4,6 +4,7 @@ import { useRegisterSW } from 'virtual:pwa-register/react'
 import { auth } from './lib/firebase'
 import { storage } from './lib/storage'
 import { familyLib } from './lib/family'
+import { businessLib } from './lib/business'
 import { sharedRoomsLib } from './lib/sharedRooms'
 import { CC, FONT, PAPER } from './tokens'
 
@@ -12,13 +13,14 @@ const INIT_WALLETS = [
 ]
 const INIT_FIXED = []
 
-import { LoginScreen }       from './screens/LoginScreen'
-import { HomeScreen }        from './screens/HomeScreen'
-import { EntryScreen }       from './screens/EntryScreen'
-import { FamilyEntryScreen } from './screens/FamilyEntryScreen'
-import { WalletsScreen }     from './screens/WalletsScreen'
-import { ReportsScreen }     from './screens/ReportsScreen'
-import { SettingsScreen }    from './screens/SettingsScreen'
+import { LoginScreen }         from './screens/LoginScreen'
+import { HomeScreen }          from './screens/HomeScreen'
+import { EntryScreen }         from './screens/EntryScreen'
+import { FamilyEntryScreen }   from './screens/FamilyEntryScreen'
+import { BusinessEntryScreen } from './screens/BusinessEntryScreen'
+import { WalletsScreen }       from './screens/WalletsScreen'
+import { ReportsScreen }       from './screens/ReportsScreen'
+import { SettingsScreen }      from './screens/SettingsScreen'
 import { TabBar }  from './components/TabBar'
 import { Toast }   from './components/Toast'
 
@@ -52,6 +54,12 @@ export default function App() {
   const familyUnsubRef  = useRef(null)
   const processedRef    = useRef(new Set())
 
+  // Business pool — undefined=loading, null=ไม่มี business, object=มี business
+  const [businessData,      setBusinessData]      = useState(undefined)
+  const [businessEntryOpen, setBusinessEntryOpen] = useState(false)
+  const [businessTxns,      setBusinessTxns]      = useState([])
+  const businessUnsubRef = useRef(null)
+
   useEffect(() => {
     return onAuthStateChanged(auth, u => setUser(u ?? null))
   }, [])
@@ -60,6 +68,7 @@ export default function App() {
     if (!user) {
       setTxns([]); setWallets([]); setFixedExpenses([])
       setGoal(750000); setFamilyData(null); setFamilyTxns([]); setRooms([])
+      setBusinessData(null); setBusinessTxns([])
       processedRef.current = new Set()
       return
     }
@@ -123,6 +132,18 @@ export default function App() {
       familyUnsubRef.current = familyLib.subscribeTxns(code, setFamilyTxns)
     })
     return () => familyUnsubRef.current?.()
+  }, [user])
+
+  useEffect(() => {
+    if (!user) return
+    businessLib.getUserBusinessCode(user.uid).then(async code => {
+      if (!code) { setBusinessData(null); return }
+      const data = await businessLib.getBusinessByCode(code)
+      if (!data) { setBusinessData(null); return }
+      setBusinessData(data)
+      businessUnsubRef.current = businessLib.subscribeTxns(code, setBusinessTxns)
+    })
+    return () => businessUnsubRef.current?.()
   }, [user])
 
   useEffect(() => {
@@ -285,6 +306,48 @@ export default function App() {
     setFamilyTxns([])
   }
 
+  const addBusinessTxn = async (txn) => {
+    if (!businessData?.code) return
+    await businessLib.addTxn(businessData.code, txn)
+    setBusinessEntryOpen(false)
+    showToast('บันทึกคลังธุรกิจแล้ว! 💼')
+  }
+
+  const editBusinessTxn = async (txn) => {
+    if (!businessData?.code) return
+    const { _id, ...rest } = txn
+    await businessLib.updateBusinessTxn(businessData.code, _id, rest)
+  }
+
+  const deleteBusinessTxn = async (txn) => {
+    if (!businessData?.code) return
+    await businessLib.deleteBusinessTxn(businessData.code, txn._id)
+  }
+
+  const handleCreateBusiness = async (name) => {
+    const code = Math.random().toString(36).slice(2, 8).toUpperCase()
+    const data = await businessLib.createBusiness(code, user, name)
+    setBusinessData(data)
+    businessUnsubRef.current?.()
+    businessUnsubRef.current = businessLib.subscribeTxns(code, setBusinessTxns)
+  }
+
+  const handleJoinBusiness = async (code) => {
+    const data = await businessLib.joinBusiness(code.trim().toUpperCase(), user)
+    if (!data) return false
+    setBusinessData(data)
+    businessUnsubRef.current?.()
+    businessUnsubRef.current = businessLib.subscribeTxns(data.code, setBusinessTxns)
+    return true
+  }
+
+  const handleBusinessLeft = () => {
+    businessUnsubRef.current?.()
+    businessUnsubRef.current = null
+    setBusinessData(null)
+    setBusinessTxns([])
+  }
+
   const handleTabChange = (newTab) => {
     if (newTab !== 'wallets') setWalletSubPage(0)
     setTab(newTab)
@@ -329,6 +392,12 @@ export default function App() {
             onDeleteFamilyTxn={deleteFamilyTxn}
             onCreateFamily={handleCreateFamily}
             onJoinFamily={handleJoinFamily}
+            businessData={businessData}
+            businessTxns={businessTxns}
+            onEditBusinessTxn={editBusinessTxn}
+            onDeleteBusinessTxn={deleteBusinessTxn}
+            onCreateBusiness={handleCreateBusiness}
+            onJoinBusiness={handleJoinBusiness}
             onPageChange={setWalletSubPage}
             rooms={rooms}
             onCreateRoom={handleCreateRoom}
@@ -336,7 +405,7 @@ export default function App() {
             onAddRoomTxn={handleAddRoomTxn}
           />
         )}
-        {tab === 'reports'  && <ReportsScreen txns={txns} familyTxns={familyTxns} user={user} onEditTxn={editTxn} onDeleteTxn={deleteTxn} onEditFamilyTxn={editFamilyTxn} onDeleteFamilyTxn={deleteFamilyTxn} />}
+        {tab === 'reports'  && <ReportsScreen txns={txns} familyTxns={familyTxns} businessTxns={businessTxns} user={user} onEditTxn={editTxn} onDeleteTxn={deleteTxn} onEditFamilyTxn={editFamilyTxn} onDeleteFamilyTxn={deleteFamilyTxn} onEditBusinessTxn={editBusinessTxn} onDeleteBusinessTxn={deleteBusinessTxn} />}
         {tab === 'settings' && (
           <SettingsScreen
             txns={txns}
@@ -351,6 +420,8 @@ export default function App() {
             onLeaveRoom={handleLeaveRoom}
             familyData={familyData}
             onLeaveFamily={handleFamilyLeft}
+            businessData={businessData}
+            onLeaveBusiness={handleBusinessLeft}
             onUserRefresh={handleUserRefresh}
           />
         )}
@@ -369,13 +440,18 @@ export default function App() {
           <FamilyEntryScreen addFamilyTxn={addFamilyTxn} close={() => setFamilyEntryOpen(false)} user={user} />
         )}
 
-        {!entryOpen && !familyEntryOpen && (
+        {businessEntryOpen && (
+          <BusinessEntryScreen addBusinessTxn={addBusinessTxn} close={() => setBusinessEntryOpen(false)} user={user} />
+        )}
+
+        {!entryOpen && !familyEntryOpen && !businessEntryOpen && (
           <TabBar
             active={tab}
             onChange={handleTabChange}
             onAdd={() => setEntryOpen(true)}
             walletSubPage={walletSubPage}
             onFamilyAdd={() => setFamilyEntryOpen(true)}
+            onBusinessAdd={() => setBusinessEntryOpen(true)}
           />
         )}
 
