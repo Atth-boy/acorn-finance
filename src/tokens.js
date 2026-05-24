@@ -15,6 +15,18 @@ export const CC = {
   emberSoft:  '#E8C4B8',
 }
 
+// Business pool palette (slate + brass)
+export const CCB = {
+  slate:     '#3A5666',
+  slateDeep: '#243845',
+  slateSoft: '#D2DAE0',
+  brass:     '#B07A3A',
+  brassSoft: '#E8D4B0',
+  gold:      '#D4A55C',
+  goldSoft:  '#F1DFB8',
+  ledger:    '#456644',
+}
+
 export const FONT = '"Kanit", sans-serif'
 export const DISPLAY = '"Kanit", sans-serif'
 

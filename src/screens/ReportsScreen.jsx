@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { CC, DISPLAY, FONT } from '../tokens'
+import { BIZ_INCOME_CATS, BIZ_EXPENSE_CATS } from '../lib/businessCats'
 import { Squirrel } from '../components/Squirrel'
 import { Acorn }    from '../components/Acorn'
 
@@ -19,26 +20,6 @@ const CATS = [
   { id: 'edu',         ic: '📚', l: 'ศึกษา' },
   { id: 'bill',        ic: '📄', l: 'bill&fees' },
   { id: 'other',       ic: '🗂️', l: 'อื่นๆ' },
-]
-
-const BIZ_INCOME_CATS = [
-  { id: 'sales',    ic: '🛍️', l: 'ขายสินค้า' },
-  { id: 'service',  ic: '🤝', l: 'บริการ' },
-  { id: 'shipping', ic: '📦', l: 'ค่าจัดส่ง' },
-  { id: 'other_in', ic: '✨', l: 'อื่นๆ' },
-]
-const BIZ_EXPENSE_CATS = [
-  { id: 'stock',     ic: '📦', l: 'สต๊อกสินค้า' },
-  { id: 'marketing', ic: '📢', l: 'การตลาด' },
-  { id: 'rent',      ic: '🏢', l: 'ค่าเช่า' },
-  { id: 'salary',    ic: '👥', l: 'เงินเดือน' },
-  { id: 'other_out', ic: '⚡', l: 'อื่นๆ' },
-  { id: 'packaging', ic: '🎁', l: 'บรรจุภัณฑ์' },
-  { id: 'logistics', ic: '🚚', l: 'ขนส่ง' },
-  { id: 'equipment', ic: '🖨️', l: 'อุปกรณ์' },
-  { id: 'fees',      ic: '💳', l: 'ค่าธรรมเนียม' },
-  { id: 'tax',       ic: '📋', l: 'ภาษี' },
-  { id: 'utility',   ic: '💡', l: 'สาธารณูปโภค' },
 ]
 
 const COLORS = {

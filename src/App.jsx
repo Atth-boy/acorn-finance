@@ -58,7 +58,8 @@ export default function App() {
   const [businessData,      setBusinessData]      = useState(undefined)
   const [businessEntryOpen, setBusinessEntryOpen] = useState(false)
   const [businessTxns,      setBusinessTxns]      = useState([])
-  const businessUnsubRef = useRef(null)
+  const businessUnsubRef    = useRef(null)  // txns
+  const businessDocUnsubRef = useRef(null)  // members/name (live)
 
   useEffect(() => {
     return onAuthStateChanged(auth, u => setUser(u ?? null))
@@ -136,14 +137,15 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return
-    businessLib.getUserBusinessCode(user.uid).then(async code => {
+    businessLib.getUserBusinessCode(user.uid).then(code => {
       if (!code) { setBusinessData(null); return }
-      const data = await businessLib.getBusinessByCode(code)
-      if (!data) { setBusinessData(null); return }
-      setBusinessData(data)
-      businessUnsubRef.current = businessLib.subscribeTxns(code, setBusinessTxns)
+      businessDocUnsubRef.current = businessLib.subscribeBusiness(code, setBusinessData)
+      businessUnsubRef.current    = businessLib.subscribeTxns(code, setBusinessTxns)
     })
-    return () => businessUnsubRef.current?.()
+    return () => {
+      businessDocUnsubRef.current?.()
+      businessUnsubRef.current?.()
+    }
   }, [user])
 
   useEffect(() => {
@@ -308,7 +310,12 @@ export default function App() {
 
   const addBusinessTxn = async (txn) => {
     if (!businessData?.code) return
-    await businessLib.addTxn(businessData.code, txn)
+    let finalTxn = txn
+    if (txn.receiptImg?.startsWith('data:')) {
+      const { url, path } = await businessLib.uploadReceipt(businessData.code, txn.receiptImg, txn.id)
+      finalTxn = { ...txn, receiptImg: url, receiptPath: path }
+    }
+    await businessLib.addTxn(businessData.code, finalTxn)
     setBusinessEntryOpen(false)
     showToast('บันทึกคลังธุรกิจแล้ว! 💼')
   }
@@ -321,29 +328,35 @@ export default function App() {
 
   const deleteBusinessTxn = async (txn) => {
     if (!businessData?.code) return
-    await businessLib.deleteBusinessTxn(businessData.code, txn._id)
+    await businessLib.deleteBusinessTxn(businessData.code, txn._id, txn.receiptPath)
   }
 
   const handleCreateBusiness = async (name) => {
     const code = Math.random().toString(36).slice(2, 8).toUpperCase()
     const data = await businessLib.createBusiness(code, user, name)
     setBusinessData(data)
+    businessDocUnsubRef.current?.()
     businessUnsubRef.current?.()
-    businessUnsubRef.current = businessLib.subscribeTxns(code, setBusinessTxns)
+    businessDocUnsubRef.current = businessLib.subscribeBusiness(code, setBusinessData)
+    businessUnsubRef.current    = businessLib.subscribeTxns(code, setBusinessTxns)
   }
 
   const handleJoinBusiness = async (code) => {
     const data = await businessLib.joinBusiness(code.trim().toUpperCase(), user)
     if (!data) return false
     setBusinessData(data)
+    businessDocUnsubRef.current?.()
     businessUnsubRef.current?.()
-    businessUnsubRef.current = businessLib.subscribeTxns(data.code, setBusinessTxns)
+    businessDocUnsubRef.current = businessLib.subscribeBusiness(data.code, setBusinessData)
+    businessUnsubRef.current    = businessLib.subscribeTxns(data.code, setBusinessTxns)
     return true
   }
 
   const handleBusinessLeft = () => {
+    businessDocUnsubRef.current?.()
     businessUnsubRef.current?.()
-    businessUnsubRef.current = null
+    businessDocUnsubRef.current = null
+    businessUnsubRef.current    = null
     setBusinessData(null)
     setBusinessTxns([])
   }

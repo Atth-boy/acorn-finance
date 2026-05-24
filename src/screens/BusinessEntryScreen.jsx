@@ -1,46 +1,37 @@
 import { useState, useRef } from 'react'
-import { CC, DISPLAY, FONT } from '../tokens'
+import { CC, CCB, DISPLAY, FONT } from '../tokens'
+import { BIZ_INCOME_CATS, BIZ_EXPENSE_BASE, BIZ_EXPENSE_EXTRA, BIZ_EXPENSE_CATS } from '../lib/businessCats'
 
-// Business palette (slate + brass)
-const BZ       = '#3A5666'  // slate
-const BZ_DEEP  = '#243845'
-const BZ_SOFT  = '#D2DAE0'
-const BZ_BRASS = '#B07A3A'
-const BZ_GOLD  = '#D4A55C'
+// Local readable aliases for the slate/brass palette
+const BZ       = CCB.slate
+const BZ_DEEP  = CCB.slateDeep
+const BZ_SOFT  = CCB.slateSoft
+const BZ_BRASS = CCB.brass
+const BZ_GOLD  = CCB.gold
 
-const BIZ_INCOME_CATS = [
-  { id: 'sales',    ic: '🛍️', l: 'ขายสินค้า' },
-  { id: 'service',  ic: '🤝', l: 'บริการ' },
-  { id: 'shipping', ic: '📦', l: 'ค่าจัดส่ง' },
-  { id: 'other_in', ic: '✨', l: 'อื่นๆ' },
-]
-
-const BIZ_EXPENSE_CATS = [
-  { id: 'stock',     ic: '📦', l: 'สต๊อกสินค้า' },
-  { id: 'marketing', ic: '📢', l: 'การตลาด' },
-  { id: 'rent',      ic: '🏢', l: 'ค่าเช่า' },
-  { id: 'salary',    ic: '👥', l: 'เงินเดือน' },
-  { id: 'other_out', ic: '⚡', l: 'อื่นๆ' },
-]
-
-const BIZ_EXPENSE_EXTRA = [
-  { id: 'packaging',  ic: '🎁', l: 'บรรจุภัณฑ์' },
-  { id: 'logistics',  ic: '🚚', l: 'ขนส่ง' },
-  { id: 'equipment',  ic: '🖨️', l: 'อุปกรณ์' },
-  { id: 'fees',       ic: '💳', l: 'ค่าธรรมเนียม' },
-  { id: 'tax',        ic: '📋', l: 'ภาษี' },
-  { id: 'utility',    ic: '💡', l: 'สาธารณูปโภค' },
-]
-
-const ALL_BIZ_EXPENSE = [...BIZ_EXPENSE_CATS, ...BIZ_EXPENSE_EXTRA]
-
-const MODES = [
-  { id: 'daily',    l: 'รายวัน',   ic: '📅' },
-  { id: 'schedule', l: 'ตั้งเวลา', ic: '🗓️' },
-  { id: 'monthly',  l: 'ทุกเดือน', ic: '📆' },
-]
-
-const MONTH_NAMES = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
+function compressImage(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        const MAX = 800
+        let { width, height } = img
+        if (width > MAX || height > MAX) {
+          const ratio = Math.min(MAX / width, MAX / height)
+          width = Math.round(width * ratio)
+          height = Math.round(height * ratio)
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width; canvas.height = height
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height)
+        resolve(canvas.toDataURL('image/jpeg', 0.6))
+      }
+      img.src = e.target.result
+    }
+    reader.readAsDataURL(file)
+  })
+}
 
 function Briefcase({ size = 22, color = '#fff', accent = BZ_SOFT }) {
   return (
@@ -59,14 +50,10 @@ export function BusinessEntryScreen({ addBusinessTxn, close, user }) {
   const [amount,       setAmount]       = useState('0')
   const [expCat,       setExpCat]       = useState('stock')
   const [incCat,       setIncCat]       = useState('sales')
-  const [mode,         setMode]         = useState('daily')
   const [note,         setNote]         = useState('')
   const [receipt,      setReceipt]      = useState(null)
-  const [showCalendar, setShowCalendar] = useState(false)
+  const [submitting,   setSubmitting]   = useState(false)
   const [showMoreCats, setShowMoreCats] = useState(false)
-  const [scheduleDate, setScheduleDate] = useState(null)
-  const [calYear,      setCalYear]      = useState(new Date().getFullYear())
-  const [calMonth,     setCalMonth]     = useState(new Date().getMonth())
 
   const fileRef = useRef(null)
 
@@ -76,54 +63,45 @@ export function BusinessEntryScreen({ addBusinessTxn, close, user }) {
     setAmount(a => a === '0' ? k : (a + k).slice(0, 9))
   }
 
-  const handleModeSelect = (m) => {
-    setMode(m)
-    if (m === 'schedule') setShowCalendar(true)
-  }
-
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files[0]
     if (!file) return
-    setReceipt({ url: URL.createObjectURL(file), name: file.name })
+    try {
+      const compressed = await compressImage(file)
+      setReceipt({ url: compressed, name: file.name })
+    } catch {
+      alert('ไม่สามารถโหลดรูปได้ กรุณาลองใหม่')
+    }
   }
 
-  const submit = () => {
+  const submit = async () => {
+    if (submitting) return
     const n = parseFloat(amount) || 0
     if (n === 0) return
-    const c = type === 'expense'
-      ? ALL_BIZ_EXPENSE.find(x => x.id === expCat)
-      : BIZ_INCOME_CATS.find(x => x.id === incCat)
-    const now = new Date()
-    addBusinessTxn({
-      id:            now.getTime(),
-      label:         note.trim() || c.l,
-      cat:           c.l,
-      ic:            c.ic,
-      amt:           type === 'expense' ? -n : n,
-      time:          now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
-      mode,
-      scheduleDate:  scheduleDate ? scheduleDate.toISOString() : null,
-      note:          note.trim() || null,
-      createdByName: user?.displayName || user?.email?.replace('@acorn.app', '') || 'ไม่ทราบ',
-    })
+    setSubmitting(true)
+    try {
+      const c = type === 'expense'
+        ? BIZ_EXPENSE_CATS.find(x => x.id === expCat)
+        : BIZ_INCOME_CATS.find(x => x.id === incCat)
+      const now = new Date()
+      await addBusinessTxn({
+        id:            now.getTime(),
+        label:         note.trim() || c.l,
+        cat:           c.l,
+        ic:            c.ic,
+        amt:           type === 'expense' ? -n : n,
+        time:          now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+        mode:          'daily',
+        note:          note.trim() || null,
+        receiptImg:    receipt?.url || null,
+        createdByName: user?.displayName || user?.email?.replace('@acorn.app', '') || 'ไม่ทราบ',
+      })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  const disabled = parseFloat(amount) === 0
-
-  const daysInMonth     = (y, m) => new Date(y, m + 1, 0).getDate()
-  const firstDayOfMonth = (y, m) => new Date(y, m, 1).getDay()
-  const prevCalMonth = () => {
-    if (calMonth === 0) { setCalMonth(11); setCalYear(y => y - 1) }
-    else setCalMonth(m => m - 1)
-  }
-  const nextCalMonth = () => {
-    if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1) }
-    else setCalMonth(m => m + 1)
-  }
-
-  const scheduleDateLabel = scheduleDate
-    ? `${scheduleDate.getDate()} ${MONTH_NAMES[scheduleDate.getMonth()]} ${scheduleDate.getFullYear() + 543}`
-    : null
+  const disabled = parseFloat(amount) === 0 || submitting
 
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: '#EEF2F4', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -203,7 +181,7 @@ export function BusinessEntryScreen({ addBusinessTxn, close, user }) {
         {type === 'expense' && (
           <div style={{ padding: '0 18px 10px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 5 }}>
-              {BIZ_EXPENSE_CATS.map(c => {
+              {BIZ_EXPENSE_BASE.map(c => {
                 const on = c.id === expCat
                 return (
                   <button key={c.id} onClick={() => setExpCat(c.id)}
@@ -263,34 +241,6 @@ export function BusinessEntryScreen({ addBusinessTxn, close, user }) {
           </div>
         )}
 
-        {/* Payment mode — expense only */}
-        {type === 'expense' && (
-          <div style={{ padding: '0 18px 10px' }}>
-            <div style={{ fontSize: 10, color: BZ_DEEP, letterSpacing: 0.6, textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>ประเภทการจ่าย</div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {MODES.map(m => {
-                const on = m.id === mode
-                return (
-                  <button key={m.id} onClick={() => handleModeSelect(m.id)}
-                    style={{
-                      padding: '7px 12px', borderRadius: 100, fontSize: 11, fontWeight: 600,
-                      cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 4,
-                      background: on ? BZ      : '#F8FAFB',
-                      color:      on ? '#fff'  : BZ_DEEP,
-                      border:     on ? 'none'  : `1px solid ${BZ_SOFT}`,
-                    }}>
-                    <span>{m.ic}</span>
-                    {m.l}
-                    {m.id === 'schedule' && scheduleDateLabel && on && (
-                      <span style={{ opacity: 0.8, fontWeight: 500 }}>· {scheduleDateLabel}</span>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
         {/* Note */}
         <div style={{ padding: '0 18px 8px' }}>
           <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="📝 รายละเอียด / เลขที่ใบสั่งซื้อ..."
@@ -339,49 +289,11 @@ export function BusinessEntryScreen({ addBusinessTxn, close, user }) {
               color: '#fff',
               boxShadow: disabled ? 'none' : '0 4px 14px rgba(58,86,102,0.4)',
             }}>
-            <Briefcase size={18} color={BZ_GOLD} accent="#fff" /> บันทึกคลังธุรกิจ
+            <Briefcase size={18} color={BZ_GOLD} accent="#fff" />
+            {submitting ? 'กำลังบันทึก...' : 'บันทึกคลังธุรกิจ'}
           </button>
         </div>
       </div>
-
-      {/* Calendar */}
-      {showCalendar && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 100, background: 'rgba(36,56,69,0.55)', display: 'flex', alignItems: 'flex-end' }}
-          onClick={() => setShowCalendar(false)}>
-          <div style={{ width: '100%', background: '#EEF2F4', borderRadius: '24px 24px 0 0', padding: '20px 16px 32px' }}
-            onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <button onClick={prevCalMonth} style={{ background: 'none', border: 'none', fontSize: 22, color: BZ, cursor: 'pointer', padding: '4px 10px' }}>‹</button>
-              <div style={{ fontWeight: 700, fontFamily: DISPLAY, fontSize: 16, color: BZ_DEEP }}>{MONTH_NAMES[calMonth]} {calYear + 543}</div>
-              <button onClick={nextCalMonth} style={{ background: 'none', border: 'none', fontSize: 22, color: BZ, cursor: 'pointer', padding: '4px 10px' }}>›</button>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 6 }}>
-              {['อา','จ','อ','พ','พฤ','ศ','ส'].map(d => (
-                <div key={d} style={{ textAlign: 'center', fontSize: 11, color: BZ_DEEP, fontWeight: 600, padding: '4px 0' }}>{d}</div>
-              ))}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
-              {Array.from({ length: firstDayOfMonth(calYear, calMonth) }).map((_, i) => <div key={`b-${i}`} />)}
-              {Array.from({ length: daysInMonth(calYear, calMonth) }).map((_, i) => {
-                const day = i + 1
-                const d   = new Date(calYear, calMonth, day)
-                const sel = scheduleDate && d.toDateString() === scheduleDate.toDateString()
-                const tod = d.toDateString() === new Date().toDateString()
-                return (
-                  <button key={day} onClick={() => { setScheduleDate(d); setShowCalendar(false) }}
-                    style={{ aspectRatio: '1', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: sel ? 700 : 500, background: sel ? BZ : tod ? BZ_SOFT : '#F8FAFB', color: sel ? '#fff' : tod ? BZ_DEEP : CC.ink }}>
-                    {day}
-                  </button>
-                )
-              })}
-            </div>
-            <button onClick={() => setShowCalendar(false)}
-              style={{ marginTop: 16, width: '100%', padding: '13px', borderRadius: 14, border: 'none', background: BZ, color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: FONT, cursor: 'pointer' }}>
-              ยืนยัน
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

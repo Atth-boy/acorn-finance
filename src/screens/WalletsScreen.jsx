@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { sharedRoomsLib } from '../lib/sharedRooms'
-import { CC, DISPLAY, FONT, PAPER } from '../tokens'
+import { CC, CCB, DISPLAY, FONT, PAPER } from '../tokens'
+import { BIZ_INCOME_CATS, BIZ_EXPENSE_CATS } from '../lib/businessCats'
 import { Squirrel } from '../components/Squirrel'
 import { Acorn }    from '../components/Acorn'
 import { Leaf }     from '../components/Leaf'
@@ -15,38 +16,6 @@ const FAMILY_CATS  = [
   { id: 'health', ic: '💊', l: 'สุขภาพ' },
   { id: 'shop',   ic: '🛍️', l: 'ซื้อของ' },
   { id: 'other',  ic: '🎁', l: 'อื่นๆ' },
-]
-
-// Business palette (slate + brass)
-const CCB = {
-  slate:     '#3A5666',
-  slateDeep: '#243845',
-  slateSoft: '#D2DAE0',
-  brass:     '#B07A3A',
-  brassSoft: '#E8D4B0',
-  gold:      '#D4A55C',
-  goldSoft:  '#F1DFB8',
-  ledger:    '#456644',
-}
-
-const BIZ_INCOME_CATS = [
-  { id: 'sales',    ic: '🛍️', l: 'ขายสินค้า',  color: CCB.gold },
-  { id: 'service',  ic: '🤝', l: 'บริการ',     color: CCB.brass },
-  { id: 'shipping', ic: '📦', l: 'ค่าจัดส่ง',   color: '#C8924A' },
-  { id: 'other_in', ic: '✨', l: 'อื่นๆ',       color: '#8B5A3C' },
-]
-const BIZ_EXPENSE_CATS = [
-  { id: 'stock',     ic: '📦', l: 'สต๊อกสินค้า' },
-  { id: 'marketing', ic: '📢', l: 'การตลาด' },
-  { id: 'rent',      ic: '🏢', l: 'ค่าเช่า' },
-  { id: 'salary',    ic: '👥', l: 'เงินเดือน' },
-  { id: 'other_out', ic: '⚡', l: 'อื่นๆ' },
-  { id: 'packaging', ic: '🎁', l: 'บรรจุภัณฑ์' },
-  { id: 'logistics', ic: '🚚', l: 'ขนส่ง' },
-  { id: 'equipment', ic: '🖨️', l: 'อุปกรณ์' },
-  { id: 'fees',      ic: '💳', l: 'ค่าธรรมเนียม' },
-  { id: 'tax',       ic: '📋', l: 'ภาษี' },
-  { id: 'utility',   ic: '💡', l: 'สาธารณูปโภค' },
 ]
 
 function daysUntilDate(isoDate) {
@@ -228,6 +197,7 @@ function AcornBarrel({ acorns, w = 120, h = 140 }) {
 
 // ─── Main component ───────────────────────────────────────────────────────
 export function WalletsScreen({
+  user,
   wallets, fixedExpenses, goal = 750000, onSetGoal, onUpsertWallet, onDeleteWallet, onSaveFixed, onDeleteFixed,
   familyData, familyTxns = [], onEditFamilyTxn, onDeleteFamilyTxn, onCreateFamily, onJoinFamily,
   businessData, businessTxns = [], onEditBusinessTxn, onDeleteBusinessTxn, onCreateBusiness, onJoinBusiness,
@@ -949,7 +919,7 @@ export function WalletsScreen({
                       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, background: CC.bg, borderRadius: 100, padding: '5px 10px 5px 5px', border: `1px solid ${CC.border}` }}>
                         <Avatar name={m.name} bg={m.bg} size={26}/>
                         <div style={{ fontSize: 12, fontWeight: 600, color: CC.ink }}>{m.name}</div>
-                        {m.isMe && <div style={{ fontSize: 9, color: CC.walnut }}>(ฉัน)</div>}
+                        {m.uid === user?.uid && <div style={{ fontSize: 9, color: CC.walnut }}>(ฉัน)</div>}
                       </div>
                     ))}
                   </div>
@@ -1151,7 +1121,7 @@ export function WalletsScreen({
                       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, background: CC.bg, borderRadius: 100, padding: '5px 10px 5px 5px', border: `1px solid ${CC.border}` }}>
                         <Avatar name={m.name} bg={m.bg} size={26}/>
                         <div style={{ fontSize: 12, fontWeight: 600, color: CC.ink }}>{m.name}</div>
-                        {m.isMe && <div style={{ fontSize: 9, color: CC.walnut }}>(ฉัน)</div>}
+                        {m.uid === user?.uid && <div style={{ fontSize: 9, color: CC.walnut }}>(ฉัน)</div>}
                       </div>
                     ))}
                   </div>
@@ -1737,6 +1707,11 @@ export function WalletsScreen({
                 {selBizTxn.note && (
                   <div style={{ background: CC.surface, borderRadius: 14, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: CC.ink }}>
                     📝 {selBizTxn.note}
+                  </div>
+                )}
+                {selBizTxn.receiptImg && (
+                  <div style={{ marginBottom: 14, borderRadius: 12, overflow: 'hidden', background: '#000' }}>
+                    <img src={selBizTxn.receiptImg} alt="ใบเสร็จ" style={{ width: '100%', objectFit: 'contain', display: 'block' }} />
                   </div>
                 )}
                 <div style={{ display: 'flex', gap: 10 }}>

@@ -87,7 +87,12 @@ export function SettingsScreen({ txns, user, onSignOut, onReset, onResetAll, roo
     setLeavingBusiness(true)
     try {
       if (isBusinessLast) {
-        await businessLib.deleteBusiness(businessData.code, user.uid)
+        const res = await businessLib.deleteBusiness(businessData.code, user.uid)
+        // Server-side guard refused: another partner exists that local state didn't know about.
+        // Leave instead of wiping their data.
+        if (res && res.ok === false && res.reason === 'has_other_members') {
+          await businessLib.leaveBusiness(businessData.code, user.uid)
+        }
       } else {
         await businessLib.leaveBusiness(businessData.code, user.uid)
       }

@@ -1,6 +1,6 @@
 import {
   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
-  addDoc, onSnapshot, query, orderBy, arrayUnion, serverTimestamp, writeBatch,
+  addDoc, onSnapshot, query, orderBy, arrayUnion, arrayRemove, serverTimestamp, writeBatch,
 } from 'firebase/firestore'
 import { db } from './firebase'
 
@@ -24,7 +24,6 @@ export const familyLib = {
       uid: user.uid,
       name: user.displayName || 'ฉัน',
       photoURL: user.photoURL || null,
-      isMe: true,
     }
     await setDoc(familyDoc(code), {
       code,
@@ -71,8 +70,10 @@ export const familyLib = {
   async leaveFamily(code, uid) {
     const snap = await getDoc(familyDoc(code))
     if (!snap.exists()) return
-    const remaining = (snap.data().members || []).filter(m => m.uid !== uid)
-    await updateDoc(familyDoc(code), { members: remaining })
+    // arrayRemove exact member object(s) for this uid — atomic against concurrent
+    // join/leave (also clears duplicates).
+    const mine = (snap.data().members || []).filter(m => m.uid === uid)
+    if (mine.length) await updateDoc(familyDoc(code), { members: arrayRemove(...mine) })
     await setDoc(profileDoc(uid), { familyCode: null }, { merge: true })
   },
 
