@@ -23,6 +23,7 @@ import { ReportsScreen }       from './screens/ReportsScreen'
 import { SettingsScreen }      from './screens/SettingsScreen'
 import { TabBar }  from './components/TabBar'
 import { Toast }   from './components/Toast'
+import { AnimatedSquirrel } from './components/AnimatedSquirrel'
 
 export default function App() {
   const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW({
@@ -469,24 +470,32 @@ export default function App() {
         )}
 
         {needRefresh && (
-          <div style={{
-            position: 'absolute', top: 0, left: 0, right: 0, zIndex: 9999,
-            background: CC.walnut, color: CC.surface,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '10px 16px', fontFamily: FONT, fontSize: 14,
-          }}>
-            <span>มีเวอร์ชันใหม่พร้อมใช้งาน 🌰</span>
-            <button
-              onClick={() => updateServiceWorker(true)}
-              style={{
-                background: CC.surface, color: CC.walnut, border: 'none',
-                borderRadius: 8, padding: '5px 14px',
-                fontFamily: FONT, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-              }}
-            >
-              อัปเดต
-            </button>
-          </div>
+          <button
+            onClick={() => updateServiceWorker(true)}
+            aria-label="มีอัพเดทใหม่ — แตะเพื่ออัปเดต"
+            style={{
+              position: 'absolute', top: 'calc(var(--sat) + 18px)',
+              left: '50%', transform: 'translateX(-50%)',
+              zIndex: 9999,
+              width: 168, height: 168, borderRadius: '50%',
+              border: `3px solid ${CC.amber}`,
+              background: 'rgba(251,246,233,0.55)',
+              backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+              backgroundImage: PAPER, backgroundBlendMode: 'soft-light',
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center', gap: 2,
+              cursor: 'pointer', padding: 0,
+              animation: 'update-ring-glow 1.4s ease-in-out infinite, update-pop-in 0.4s ease-out',
+            }}
+          >
+            <AnimatedSquirrel mode="update" size={104} style={{ marginTop: -6 }} />
+            <span style={{
+              fontFamily: FONT, fontSize: 13, fontWeight: 700,
+              color: CC.walnut, marginTop: -8, lineHeight: 1.15, textAlign: 'center',
+            }}>
+              กดที่กระรอก<br/>เพื่ออัพเดท
+            </span>
+          </button>
         )}
 
         {toast && <Toast message={toast} />}
@@ -499,11 +508,20 @@ function LoadingScreen() {
   return (
     <div style={{
       position: 'fixed', inset: 0,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', gap: 18,
       background: CC.bg, backgroundImage: PAPER, backgroundBlendMode: 'multiply',
-      fontSize: 48,
+      fontFamily: FONT, padding: 24, textAlign: 'center',
     }}>
-      🌰
+      <AnimatedSquirrel mode="greet" size={200} />
+      <div style={{ marginTop: 4 }}>
+        <div style={{ fontSize: 26, fontWeight: 700, color: CC.walnut, letterSpacing: 0.3 }}>
+          ยินดีต้อนรับ
+        </div>
+        <div style={{ fontSize: 17, fontWeight: 500, color: CC.ink2, marginTop: 4 }}>
+          มาเก็บลูกโอ๊กกัน
+        </div>
+      </div>
     </div>
   )
 }
