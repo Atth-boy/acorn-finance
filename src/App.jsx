@@ -1,3 +1,4 @@
+// app build: v0.1.1 (ทดสอบ prompt อัปเดตวงกลม)
 import { useState, useEffect, useRef } from 'react'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { useRegisterSW } from 'virtual:pwa-register/react'
