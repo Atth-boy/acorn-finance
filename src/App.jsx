@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
-import { useRegisterSW } from 'virtual:pwa-register/react'
 import { auth } from './lib/firebase'
 import { storage } from './lib/storage'
 import { familyLib } from './lib/family'
@@ -10,7 +9,7 @@ import { CC, FONT, PAPER } from './tokens'
 
 // ข้อความจริง (รอด minify) — ใช้เป็น marker เวอร์ชัน เพื่อให้ bundle เปลี่ยน hash
 // เวลามี deploy ใหม่ → service worker ใหม่ → prompt อัปเดตเด้ง
-const APP_VERSION = 'v0.1.2'
+const APP_VERSION = 'v0.1.3'
 
 const INIT_WALLETS = [
   { id: 'default', name: 'บัญชีหลัก', sub: 'บัญชีออมทรัพย์', amt: 0, ic: '🏦', tint: CC.mossSoft, tone: CC.moss, isDefault: true },
@@ -28,30 +27,9 @@ import { SettingsScreen }      from './screens/SettingsScreen'
 import { TabBar }  from './components/TabBar'
 import { Toast }   from './components/Toast'
 import { AnimatedSquirrel } from './components/AnimatedSquirrel'
+import { UpdatePrompt } from './components/UpdatePrompt'
 
 export default function App() {
-  const swRegRef = useRef(null)
-  const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW({
-    onRegistered(r) {
-      swRegRef.current = r
-      r && setInterval(() => r.update(), 60 * 60 * 1000)
-    },
-  })
-
-  // เช็คอัปเดตทุกครั้งที่แอปกลับมา visible/focus — รองรับเคส PWA standalone
-  // ที่ "ปิด-เปิด" แล้ว resume จาก freeze (ไม่ได้โหลดหน้าใหม่ → SW ไม่เช็คเอง)
-  useEffect(() => {
-    const check = () => {
-      if (document.visibilityState === 'visible') swRegRef.current?.update()
-    }
-    document.addEventListener('visibilitychange', check)
-    window.addEventListener('focus', check)
-    return () => {
-      document.removeEventListener('visibilitychange', check)
-      window.removeEventListener('focus', check)
-    }
-  }, [])
-
   const [user, setUser]               = useState(undefined)
   const [tab, setTab]                 = useState('home')
   const [entryOpen, setEntryOpen]     = useState(false)
@@ -489,40 +467,10 @@ export default function App() {
           />
         )}
 
-        {needRefresh && (
-          <div style={{
-            position: 'absolute', inset: 0, zIndex: 9999,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(42,31,18,0.28)',
-            backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-          }}>
-            <button
-              onClick={() => updateServiceWorker(true)}
-              aria-label="มีอัพเดทใหม่ — แตะเพื่ออัปเดต"
-              style={{
-                width: 248, height: 248, borderRadius: '50%',
-                border: `4px solid ${CC.amber}`,
-                background: 'rgba(251,246,233,0.92)',
-                backgroundImage: PAPER, backgroundBlendMode: 'soft-light',
-                display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center', gap: 2,
-                cursor: 'pointer', padding: 0,
-                animation: 'update-ring-glow 1.4s ease-in-out infinite, update-pop-in 0.4s ease-out',
-              }}
-            >
-              <AnimatedSquirrel mode="update" size={150} style={{ marginTop: -8 }} />
-              <span style={{
-                fontFamily: FONT, fontSize: 18, fontWeight: 700,
-                color: CC.walnut, marginTop: -10, lineHeight: 1.2, textAlign: 'center',
-              }}>
-                กดที่กระรอก<br/>เพื่ออัพเดท
-              </span>
-            </button>
-          </div>
-        )}
-
         {toast && <Toast message={toast} />}
       </div>
+
+      <UpdatePrompt />
     </div>
   )
 }

@@ -51,3 +51,6 @@ input, textarea {
   60%  { transform: scale(1.06); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
 }
+
+@keyframes update-spin { to { transform: rotate(360deg); } }
+.update-spin { animation: update-spin 0.8s linear infinite; }
