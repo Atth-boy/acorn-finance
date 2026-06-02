@@ -26,11 +26,27 @@ import { Toast }   from './components/Toast'
 import { AnimatedSquirrel } from './components/AnimatedSquirrel'
 
 export default function App() {
+  const swRegRef = useRef(null)
   const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW({
     onRegistered(r) {
+      swRegRef.current = r
       r && setInterval(() => r.update(), 60 * 60 * 1000)
     },
   })
+
+  // เช็คอัปเดตทุกครั้งที่แอปกลับมา visible/focus — รองรับเคส PWA standalone
+  // ที่ "ปิด-เปิด" แล้ว resume จาก freeze (ไม่ได้โหลดหน้าใหม่ → SW ไม่เช็คเอง)
+  useEffect(() => {
+    const check = () => {
+      if (document.visibilityState === 'visible') swRegRef.current?.update()
+    }
+    document.addEventListener('visibilitychange', check)
+    window.addEventListener('focus', check)
+    return () => {
+      document.removeEventListener('visibilitychange', check)
+      window.removeEventListener('focus', check)
+    }
+  }, [])
 
   const [user, setUser]               = useState(undefined)
   const [tab, setTab]                 = useState('home')
