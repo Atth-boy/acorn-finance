@@ -10,7 +10,7 @@ import { CC, FONT, PAPER } from './tokens'
 
 // ข้อความจริง (รอด minify) — ใช้เป็น marker เวอร์ชัน เพื่อให้ bundle เปลี่ยน hash
 // เวลามี deploy ใหม่ → service worker ใหม่ → prompt อัปเดตเด้ง
-const APP_VERSION = 'v0.1.1'
+const APP_VERSION = 'v0.1.2'
 
 const INIT_WALLETS = [
   { id: 'default', name: 'บัญชีหลัก', sub: 'บัญชีออมทรัพย์', amt: 0, ic: '🏦', tint: CC.mossSoft, tone: CC.moss, isDefault: true },
@@ -490,32 +490,35 @@ export default function App() {
         )}
 
         {needRefresh && (
-          <button
-            onClick={() => updateServiceWorker(true)}
-            aria-label="มีอัพเดทใหม่ — แตะเพื่ออัปเดต"
-            style={{
-              position: 'absolute', top: 'calc(var(--sat) + 18px)',
-              left: '50%', transform: 'translateX(-50%)',
-              zIndex: 9999,
-              width: 168, height: 168, borderRadius: '50%',
-              border: `3px solid ${CC.amber}`,
-              background: 'rgba(251,246,233,0.55)',
-              backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
-              backgroundImage: PAPER, backgroundBlendMode: 'soft-light',
-              display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center', gap: 2,
-              cursor: 'pointer', padding: 0,
-              animation: 'update-ring-glow 1.4s ease-in-out infinite, update-pop-in 0.4s ease-out',
-            }}
-          >
-            <AnimatedSquirrel mode="update" size={104} style={{ marginTop: -6 }} />
-            <span style={{
-              fontFamily: FONT, fontSize: 13, fontWeight: 700,
-              color: CC.walnut, marginTop: -8, lineHeight: 1.15, textAlign: 'center',
-            }}>
-              กดที่กระรอก<br/>เพื่ออัพเดท
-            </span>
-          </button>
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(42,31,18,0.28)',
+            backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+          }}>
+            <button
+              onClick={() => updateServiceWorker(true)}
+              aria-label="มีอัพเดทใหม่ — แตะเพื่ออัปเดต"
+              style={{
+                width: 248, height: 248, borderRadius: '50%',
+                border: `4px solid ${CC.amber}`,
+                background: 'rgba(251,246,233,0.92)',
+                backgroundImage: PAPER, backgroundBlendMode: 'soft-light',
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: 2,
+                cursor: 'pointer', padding: 0,
+                animation: 'update-ring-glow 1.4s ease-in-out infinite, update-pop-in 0.4s ease-out',
+              }}
+            >
+              <AnimatedSquirrel mode="update" size={150} style={{ marginTop: -8 }} />
+              <span style={{
+                fontFamily: FONT, fontSize: 18, fontWeight: 700,
+                color: CC.walnut, marginTop: -10, lineHeight: 1.2, textAlign: 'center',
+              }}>
+                กดที่กระรอก<br/>เพื่ออัพเดท
+              </span>
+            </button>
+          </div>
         )}
 
         {toast && <Toast message={toast} />}
