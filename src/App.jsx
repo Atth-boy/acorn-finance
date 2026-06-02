@@ -1,4 +1,3 @@
-// app build: v0.1.1 (ทดสอบ prompt อัปเดตวงกลม)
 import { useState, useEffect, useRef } from 'react'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { useRegisterSW } from 'virtual:pwa-register/react'
@@ -8,6 +7,10 @@ import { familyLib } from './lib/family'
 import { businessLib } from './lib/business'
 import { sharedRoomsLib } from './lib/sharedRooms'
 import { CC, FONT, PAPER } from './tokens'
+
+// ข้อความจริง (รอด minify) — ใช้เป็น marker เวอร์ชัน เพื่อให้ bundle เปลี่ยน hash
+// เวลามี deploy ใหม่ → service worker ใหม่ → prompt อัปเดตเด้ง
+const APP_VERSION = 'v0.1.1'
 
 const INIT_WALLETS = [
   { id: 'default', name: 'บัญชีหลัก', sub: 'บัญชีออมทรัพย์', amt: 0, ic: '🏦', tint: CC.mossSoft, tone: CC.moss, isDefault: true },
@@ -538,6 +541,12 @@ function LoadingScreen() {
         <div style={{ fontSize: 17, fontWeight: 500, color: CC.ink2, marginTop: 4 }}>
           มาเก็บลูกโอ๊กกัน
         </div>
+      </div>
+      <div style={{
+        position: 'absolute', bottom: 'calc(var(--sab) + 14px)',
+        fontSize: 11, color: CC.ink3, letterSpacing: 0.5,
+      }}>
+        {APP_VERSION}
       </div>
     </div>
   )
