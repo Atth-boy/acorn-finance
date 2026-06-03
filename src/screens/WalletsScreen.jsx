@@ -202,7 +202,7 @@ export function WalletsScreen({
   familyData, familyTxns = [], onEditFamilyTxn, onDeleteFamilyTxn, onCreateFamily, onJoinFamily,
   businessData, businessTxns = [], onEditBusinessTxn, onDeleteBusinessTxn, onCreateBusiness, onJoinBusiness,
   onPageChange,
-  rooms = [], onCreateRoom, onJoinRoom, onAddRoomTxn,
+  rooms = [], onCreateRoom, onJoinRoom, onAddRoomTxn, onEditRoomTxn, onDeleteRoomTxn,
 }) {
   const scrollRef = useRef(null)
   const [page, setPage] = useState(0)
@@ -256,6 +256,13 @@ export function WalletsScreen({
   const [showRoomSummary,   setShowRoomSummary]   = useState(false)
   const [activeRoomTxns,    setActiveRoomTxns]    = useState([])
   const roomTxnUnsubRef = useRef(null)
+  const [selRoomTxn,        setSelRoomTxn]        = useState(null)
+  const [rEditMode,         setREditMode]         = useState(false)
+  const [rEditLabel,        setREditLabel]        = useState('')
+  const [rEditAmt,          setREditAmt]          = useState('')
+  const [rEditBy,           setREditBy]           = useState('')
+  const [rSaving,           setRSaving]           = useState(false)
+  const [rDeleting,         setRDeleting]         = useState(false)
   const [selFamilyTxn,   setSelFamilyTxn]   = useState(null)
   const [fEditMode,      setFEditMode]      = useState(false)
   const [fEditLabel,     setFEditLabel]     = useState('')
@@ -1391,7 +1398,8 @@ export function WalletsScreen({
             {activeRoomTxns.length === 0
               ? <div style={{ textAlign: 'center', color: CC.walnut, fontSize: 13, padding: '20px 0' }}>ยังไม่มีรายการ</div>
               : activeRoomTxns.map((t, i) => (
-                <div key={t._id || i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: i < activeRoomTxns.length - 1 ? `1px solid ${CC.border}` : 'none' }}>
+                <div key={t._id || i} onClick={() => { setSelRoomTxn(t); setREditMode(false) }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: i < activeRoomTxns.length - 1 ? `1px solid ${CC.border}` : 'none', cursor: 'pointer' }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: CC.amberSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{t.ic}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>{t.label}</div>
@@ -1400,6 +1408,7 @@ export function WalletsScreen({
                   <div style={{ fontSize: 15, fontWeight: 700, fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', color: t.amt < 0 ? CC.ember : CC.moss }}>
                     {t.amt < 0 ? '−' : '+'}฿{Math.abs(t.amt).toLocaleString('th-TH')}
                   </div>
+                  <div style={{ fontSize: 14, color: CC.walnut, marginLeft: 2 }}>›</div>
                 </div>
               ))
             }
@@ -1447,6 +1456,91 @@ export function WalletsScreen({
               <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 4 }}>จ่ายโดย: <b style={{ color: CC.ink }}>{entryBy}</b></div>
             )}
             <button onClick={handleAddEntry} style={{ ...btnGreen, marginTop: 10 }}>บันทึกรายการ</button>
+          </div>
+        </div>
+      )}
+
+      {/* Shared room — txn detail / edit / delete */}
+      {selRoomTxn && (
+        <div style={{ ...overlay, zIndex: 120 }} onClick={() => { setSelRoomTxn(null); setREditMode(false) }}>
+          <div style={{ ...sheet, maxHeight: '85vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+              <button onClick={() => { setSelRoomTxn(null); setREditMode(false) }}
+                style={{ background: CC.surface, border: `1px solid ${CC.border}`, borderRadius: 20, width: 32, height: 32, fontSize: 18, color: CC.walnut, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: CC.amberSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{selRoomTxn.ic}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 16, fontWeight: 700, fontFamily: DISPLAY }}>{selRoomTxn.label}</div>
+                <div style={{ fontSize: 11, color: CC.walnut, marginTop: 2 }}>จ่ายโดย {selRoomTxn.by}</div>
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 700, fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', color: selRoomTxn.amt < 0 ? CC.ember : CC.moss }}>
+                {selRoomTxn.amt > 0 ? '+' : '−'}฿{Math.abs(selRoomTxn.amt).toLocaleString('th-TH')}
+              </div>
+            </div>
+
+            {!rEditMode ? (
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => { setREditLabel(selRoomTxn.label); setREditAmt(Math.abs(selRoomTxn.amt).toString()); setREditBy(selRoomTxn.by); setREditMode(true) }}
+                  style={{ flex: 1, padding: '13px', borderRadius: 16, border: `1px solid ${CC.border}`, background: CC.surface, color: CC.ink, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>
+                  ✏️ แก้ไข
+                </button>
+                <button
+                  onClick={async () => {
+                    if (rDeleting) return
+                    setRDeleting(true)
+                    await onDeleteRoomTxn?.(activeRoom.code, selRoomTxn)
+                    setRDeleting(false)
+                    setSelRoomTxn(null)
+                  }}
+                  disabled={rDeleting}
+                  style={{ flex: 1, padding: '13px', borderRadius: 16, border: 'none', background: CC.emberSoft, color: CC.ember, fontSize: 14, fontWeight: 700, cursor: rDeleting ? 'default' : 'pointer', fontFamily: FONT }}>
+                  {rDeleting ? '⏳ กำลังลบ...' : '🗑️ ลบ'}
+                </button>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>ชื่อรายการ</div>
+                <input type="text" value={rEditLabel} onChange={e => setREditLabel(e.target.value)} autoFocus style={{ ...inp, marginBottom: 12 }} />
+                <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 6 }}>จำนวนเงิน (บาท)</div>
+                <input type="number" value={rEditAmt} onChange={e => setREditAmt(e.target.value)} style={{ ...inp, marginBottom: 12, fontVariantNumeric: 'tabular-nums' }} />
+                <div style={{ fontSize: 12, color: CC.walnut, marginBottom: 8 }}>จ่ายโดย</div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+                  {(activeRoom?.members || []).map((m, i) => (
+                    <button key={i} onClick={() => setREditBy(m.name)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 100, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, background: rEditBy === m.name ? CC.moss : CC.bg, color: rEditBy === m.name ? '#fff' : CC.walnut, border: rEditBy === m.name ? 'none' : `1px solid ${CC.border}` }}>
+                      <Avatar name={m.name} bg={m.bg} size={20} /> {m.name}
+                    </button>
+                  ))}
+                  {rEditBy && !(activeRoom?.members || []).find(m => m.name === rEditBy) && (
+                    <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 100, fontSize: 12, fontWeight: 600, fontFamily: FONT, background: CC.moss, color: '#fff', border: 'none' }}>
+                      {rEditBy}
+                    </button>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button onClick={() => setREditMode(false)} style={{ flex: 1, padding: '13px', borderRadius: 16, border: `1px solid ${CC.border}`, background: CC.surface, color: CC.walnut, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>ยกเลิก</button>
+                  <button
+                    onClick={async () => {
+                      if (rSaving) return
+                      const absAmt = parseFloat(rEditAmt.replace(/,/g, '')) || 0
+                      if (absAmt <= 0) return
+                      setRSaving(true)
+                      const oldAmt = selRoomTxn.amt
+                      const newAmt = selRoomTxn.amt >= 0 ? absAmt : -absAmt
+                      await onEditRoomTxn?.(activeRoom.code, { ...selRoomTxn, label: rEditLabel.trim() || selRoomTxn.label, amt: newAmt, by: rEditBy || selRoomTxn.by }, oldAmt)
+                      setRSaving(false)
+                      setSelRoomTxn(null)
+                      setREditMode(false)
+                    }}
+                    disabled={rSaving}
+                    style={{ flex: 1, padding: '13px', borderRadius: 16, border: 'none', background: CC.walnut, color: '#fff', fontSize: 14, fontWeight: 700, cursor: rSaving ? 'default' : 'pointer', fontFamily: FONT }}>
+                    {rSaving ? 'กำลังบันทึก...' : '💾 บันทึก'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

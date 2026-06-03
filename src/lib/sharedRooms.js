@@ -1,6 +1,6 @@
 import {
   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc,
-  onSnapshot, query, orderBy, where, arrayUnion, increment,
+  onSnapshot, query, orderBy, where, limit, arrayUnion, increment,
   serverTimestamp, writeBatch,
 } from 'firebase/firestore'
 import { db } from './firebase'
@@ -70,6 +70,32 @@ export const sharedRoomsLib = {
       balance: increment(txn.amt),
       lastTxn: { label: txn.label, amt: txn.amt, by: txn.by, ic: txn.ic },
     })
+  },
+
+  // อัปเดต lastTxn บน room doc จากรายการล่าสุดที่เหลืออยู่ (ใช้หลังแก้/ลบ)
+  async _refreshLastTxn(code) {
+    const snap = await getDocs(query(txnCol(code), orderBy('createdAt', 'desc'), limit(1)))
+    const latest = snap.docs[0]?.data()
+    await updateDoc(roomDoc(code), {
+      lastTxn: latest ? { label: latest.label, amt: latest.amt, by: latest.by, ic: latest.ic } : null,
+    })
+  },
+
+  async editTxn(code, txnId, txn, oldAmt) {
+    const { _id, ...rest } = txn
+    await setDoc(doc(db, 'sharedRooms', code, 'transactions', txnId), rest, { merge: true })
+    await updateDoc(roomDoc(code), {
+      balance: increment((txn.amt || 0) - (oldAmt || 0)),
+    })
+    await this._refreshLastTxn(code)
+  },
+
+  async deleteTxn(code, txn) {
+    await deleteDoc(doc(db, 'sharedRooms', code, 'transactions', txn._id))
+    await updateDoc(roomDoc(code), {
+      balance: increment(-(txn.amt || 0)),
+    })
+    await this._refreshLastTxn(code)
   },
 
   async leaveRoom(code, uid) {

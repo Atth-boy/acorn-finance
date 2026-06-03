@@ -9,7 +9,7 @@ import { CC, FONT, PAPER } from './tokens'
 
 // ข้อความจริง (รอด minify) — ใช้เป็น marker เวอร์ชัน เพื่อให้ bundle เปลี่ยน hash
 // เวลามี deploy ใหม่ → service worker ใหม่ → prompt อัปเดตเด้ง
-const APP_VERSION = 'v0.1.4'
+const APP_VERSION = 'v0.1.5'
 
 const INIT_WALLETS = [
   { id: 'default', name: 'บัญชีหลัก', sub: 'บัญชีออมทรัพย์', amt: 0, ic: '🏦', tint: CC.mossSoft, tone: CC.moss, isDefault: true },
@@ -296,6 +296,14 @@ export default function App() {
     await sharedRoomsLib.addTxn(code, txn)
   }
 
+  const handleEditRoomTxn = async (code, txn, oldAmt) => {
+    await sharedRoomsLib.editTxn(code, txn._id, txn, oldAmt)
+  }
+
+  const handleDeleteRoomTxn = async (code, txn) => {
+    await sharedRoomsLib.deleteTxn(code, txn)
+  }
+
   const handleUserRefresh = () => {
     if (auth.currentUser) setUser(u => ({ ...u, displayName: auth.currentUser.displayName }))
   }
@@ -415,6 +423,8 @@ export default function App() {
             onCreateRoom={handleCreateRoom}
             onJoinRoom={handleJoinRoom}
             onAddRoomTxn={handleAddRoomTxn}
+            onEditRoomTxn={handleEditRoomTxn}
+            onDeleteRoomTxn={handleDeleteRoomTxn}
           />
         )}
         {tab === 'reports'  && <ReportsScreen txns={txns} familyTxns={familyTxns} businessTxns={businessTxns} user={user} onEditTxn={editTxn} onDeleteTxn={deleteTxn} onEditFamilyTxn={editFamilyTxn} onDeleteFamilyTxn={deleteFamilyTxn} onEditBusinessTxn={editBusinessTxn} onDeleteBusinessTxn={deleteBusinessTxn} />}
