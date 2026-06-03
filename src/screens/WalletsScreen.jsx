@@ -414,7 +414,7 @@ export function WalletsScreen({
     const node = shareCardRef.current
     if (!node) return null
     await document.fonts?.ready
-    const w = node.scrollWidth, h = node.scrollHeight
+    const w = node.offsetWidth, h = node.offsetHeight
     // กัน canvas เกินลิมิต iOS (~4096px ด้านยาว) เวลารายการเยอะ
     const pr = Math.min(2, 4000 / Math.max(w, h))
     const opts = { pixelRatio: pr, cacheBust: true, width: w, height: h }
@@ -1673,7 +1673,7 @@ export function WalletsScreen({
                       {txns.map((t, i) => (
                         <div key={t._id || i} style={{ display: 'flex', alignItems: 'center', gap: 9, paddingBottom: i < txns.length - 1 ? 7 : 0, marginBottom: i < txns.length - 1 ? 7 : 0, borderBottom: i < txns.length - 1 ? `1px dashed ${CC.border}` : 'none' }}>
                           <div style={{ fontSize: 15 }}>{t.ic}</div>
-                          <div style={{ flex: 1, fontSize: 13, color: CC.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.label}</div>
+                          <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: CC.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.label}</div>
                           <div style={{ fontSize: 13, fontWeight: 700, fontFamily: DISPLAY, color: CC.ember, fontVariantNumeric: 'tabular-nums' }}>฿{Math.abs(t.amt).toLocaleString('th-TH')}</div>
                         </div>
                       ))}

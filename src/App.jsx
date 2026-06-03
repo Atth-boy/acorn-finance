@@ -9,7 +9,7 @@ import { CC, FONT, PAPER } from './tokens'
 
 // ข้อความจริง (รอด minify) — ใช้เป็น marker เวอร์ชัน เพื่อให้ bundle เปลี่ยน hash
 // เวลามี deploy ใหม่ → service worker ใหม่ → prompt อัปเดตเด้ง
-const APP_VERSION = 'v0.1.7'
+const APP_VERSION = 'v0.1.8'
 
 const INIT_WALLETS = [
   { id: 'default', name: 'บัญชีหลัก', sub: 'บัญชีออมทรัพย์', amt: 0, ic: '🏦', tint: CC.mossSoft, tone: CC.moss, isDefault: true },
