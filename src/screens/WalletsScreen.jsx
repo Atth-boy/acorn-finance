@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { toPng } from 'html-to-image'
 import { sharedRoomsLib } from '../lib/sharedRooms'
 import { CC, CCB, DISPLAY, FONT, PAPER } from '../tokens'
 import { BIZ_INCOME_CATS, BIZ_EXPENSE_CATS } from '../lib/businessCats'
@@ -263,6 +264,9 @@ export function WalletsScreen({
   const [rEditBy,           setREditBy]           = useState('')
   const [rSaving,           setRSaving]           = useState(false)
   const [rDeleting,         setRDeleting]         = useState(false)
+  const [showShareCard,     setShowShareCard]     = useState(false)
+  const [shareBusy,         setShareBusy]         = useState(false)
+  const shareCardRef = useRef(null)
   const [selFamilyTxn,   setSelFamilyTxn]   = useState(null)
   const [fEditMode,      setFEditMode]      = useState(false)
   const [fEditLabel,     setFEditLabel]     = useState('')
@@ -403,6 +407,50 @@ export function WalletsScreen({
     const txn = { label: entryLabel || 'รายการ', amt: -Math.abs(amt), by: entryBy || addEntryRoom.members[0]?.name, ic: '💸' }
     await onAddRoomTxn(addEntryRoom.code, txn)
     setEntryLabel(''); setEntryAmt(''); setEntryBy(null); setCustomMemberName(''); setAddEntryRoom(null)
+  }
+
+  // Trip summary image
+  const genCardBlob = async () => {
+    const node = shareCardRef.current
+    if (!node) return null
+    await document.fonts?.ready
+    // render twice — first pass warms up font/SVG, second pass is reliable
+    await toPng(node, { pixelRatio: 2, cacheBust: true })
+    const dataUrl = await toPng(node, { pixelRatio: 2, cacheBust: true })
+    return await (await fetch(dataUrl)).blob()
+  }
+  const handleSaveCard = async () => {
+    if (shareBusy) return
+    setShareBusy(true)
+    try {
+      const blob = await genCardBlob()
+      if (blob) {
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url; a.download = `${activeRoom?.name || 'trip'}-สรุป.png`; a.click()
+        URL.revokeObjectURL(url)
+      }
+    } catch (e) { console.error('save card failed', e) }
+    setShareBusy(false)
+  }
+  const handleShareCard = async () => {
+    if (shareBusy) return
+    setShareBusy(true)
+    try {
+      const blob = await genCardBlob()
+      if (blob) {
+        const file = new File([blob], `${activeRoom?.name || 'trip'}.png`, { type: 'image/png' })
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ files: [file], title: activeRoom?.name || 'สรุปทริป' })
+        } else {
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url; a.download = `${activeRoom?.name || 'trip'}-สรุป.png`; a.click()
+          URL.revokeObjectURL(url)
+        }
+      }
+    } catch (e) { if (e.name !== 'AbortError') console.error('share card failed', e) }
+    setShareBusy(false)
   }
 
   // Family Pot handlers
@@ -1364,10 +1412,16 @@ export function WalletsScreen({
                 <div style={{ fontSize: 10, color: CC.walnut, letterSpacing: 1, marginBottom: 2 }}>รหัสห้อง</div>
                 <div style={{ fontSize: 18, fontFamily: 'monospace', fontWeight: 700, letterSpacing: 3 }}>{activeRoom.code}</div>
               </div>
-              <button onClick={() => setShowRoomSummary(s => !s)}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, background: showRoomSummary ? CC.amberSoft : CC.surface, border: `1px solid ${CC.border}`, borderRadius: 10, padding: '7px 12px', color: CC.walnut, fontSize: 12, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>
-                💰 สรุป
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button onClick={() => setShowShareCard(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, background: CC.mossSoft, border: `1px solid ${CC.border}`, borderRadius: 10, padding: '7px 12px', color: CC.moss, fontSize: 12, fontWeight: 700, fontFamily: FONT, cursor: 'pointer' }}>
+                  📸 ภาพสรุป
+                </button>
+                <button onClick={() => setShowRoomSummary(s => !s)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, background: showRoomSummary ? CC.amberSoft : CC.surface, border: `1px solid ${CC.border}`, borderRadius: 10, padding: '7px 12px', color: CC.walnut, fontSize: 12, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>
+                  💰 สรุป
+                </button>
+              </div>
             </div>
             {/* Per-person summary */}
             {showRoomSummary && (() => {
@@ -1544,6 +1598,104 @@ export function WalletsScreen({
           </div>
         </div>
       )}
+
+      {/* Shared room — trip summary image */}
+      {showShareCard && activeRoom && (() => {
+        const txns = activeRoomTxns
+        const txnTotal = txns.reduce((s, t) => s + Math.abs(t.amt), 0)
+        const byPerson = {}
+        txns.forEach(t => { byPerson[t.by] = (byPerson[t.by] || 0) + Math.abs(t.amt) })
+        const people = Object.entries(byPerson).sort((a, b) => b[1] - a[1])
+        const colorFor = (name) => activeRoom.members.find(m => m.name === name)?.bg || CC.walnut
+        const today = new Date()
+        const dateStr = `${today.getDate()} ${MONTH_NAMES[today.getMonth()]} ${(today.getFullYear() + 543) % 100}`
+        return (
+          <div style={{ ...overlay, zIndex: 130 }} onClick={() => { if (!shareBusy) setShowShareCard(false) }}>
+            <div style={{ ...sheet, maxHeight: '92vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%', marginBottom: 8 }}>
+                <button onClick={() => { if (!shareBusy) setShowShareCard(false) }}
+                  style={{ background: CC.surface, border: `1px solid ${CC.border}`, borderRadius: 20, width: 32, height: 32, fontSize: 18, color: CC.walnut, cursor: 'pointer' }}>×</button>
+              </div>
+
+              {/* ── Captured card scene ── */}
+              <div ref={shareCardRef} style={{
+                width: 340, position: 'relative', overflow: 'hidden', borderRadius: 26,
+                background: 'linear-gradient(165deg, #FBE6CB 0%, #F3DDB4 48%, #EBD0A6 100%)',
+                padding: '30px 22px 22px', fontFamily: FONT, boxSizing: 'border-box',
+              }}>
+                <div style={{ position: 'absolute', inset: 0, backgroundImage: PAPER, opacity: 0.45, pointerEvents: 'none' }} />
+                {/* soft sun glow */}
+                <div style={{ position: 'absolute', top: -60, right: -50, width: 180, height: 180, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,236,196,0.9) 0%, rgba(255,236,196,0) 70%)', pointerEvents: 'none' }} />
+                {/* decorative leaves */}
+                <div style={{ position: 'absolute', top: 14, left: 14, transform: 'rotate(-25deg)', opacity: 0.85 }}><Leaf size={26} /></div>
+                <div style={{ position: 'absolute', top: 20, right: 18, transform: 'rotate(35deg)', opacity: 0.7 }}><Leaf size={20} /></div>
+
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                  {/* Header */}
+                  <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 2 }}><Squirrel size={66} mood="cheer" /></div>
+                    <div style={{ fontSize: 21, fontWeight: 700, fontFamily: DISPLAY, color: CC.ink, lineHeight: 1.2 }}>{activeRoom.ic} {activeRoom.name}</div>
+                    <div style={{ fontSize: 11, color: CC.walnut, marginTop: 3, letterSpacing: 0.5 }}>สรุปทริป · {dateStr}</div>
+                  </div>
+
+                  {/* Total */}
+                  <div style={{ textAlign: 'center', background: 'rgba(255,251,240,0.75)', border: `1.5px solid ${CC.border}`, borderRadius: 18, padding: '14px 16px', marginBottom: 14 }}>
+                    <div style={{ fontSize: 11, color: CC.walnut, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>รายจ่ายรวม</div>
+                    <div style={{ fontSize: 34, fontWeight: 700, fontFamily: DISPLAY, color: CC.ember, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>฿{txnTotal.toLocaleString('th-TH')}</div>
+                    <div style={{ fontSize: 11, color: CC.walnut, marginTop: 5 }}>{activeRoom.members.length} คน · {txns.length} รายการ</div>
+                  </div>
+
+                  {/* Per-person */}
+                  {people.length > 0 && (
+                    <div style={{ background: 'rgba(255,251,240,0.6)', borderRadius: 16, padding: '12px 14px', marginBottom: 12, border: `1px solid ${CC.border}` }}>
+                      <div style={{ fontSize: 10, color: CC.walnut, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 9 }}>แยกตามคน</div>
+                      {people.map(([name, amt], i) => (
+                        <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 9, paddingBottom: i < people.length - 1 ? 8 : 0, marginBottom: i < people.length - 1 ? 8 : 0, borderBottom: i < people.length - 1 ? `1px solid ${CC.border}` : 'none' }}>
+                          <div style={{ width: 24, height: 24, borderRadius: '50%', background: colorFor(name), color: '#fff', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{name.charAt(0)}</div>
+                          <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: CC.ink }}>{name}</div>
+                          <div style={{ fontSize: 14, fontWeight: 700, fontFamily: DISPLAY, color: CC.walnut, fontVariantNumeric: 'tabular-nums' }}>฿{amt.toLocaleString('th-TH')}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* All items */}
+                  {txns.length > 0 && (
+                    <div style={{ background: 'rgba(255,251,240,0.6)', borderRadius: 16, padding: '12px 14px', marginBottom: 14, border: `1px solid ${CC.border}` }}>
+                      <div style={{ fontSize: 10, color: CC.walnut, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 9 }}>รายการทั้งหมด</div>
+                      {txns.map((t, i) => (
+                        <div key={t._id || i} style={{ display: 'flex', alignItems: 'center', gap: 9, paddingBottom: i < txns.length - 1 ? 7 : 0, marginBottom: i < txns.length - 1 ? 7 : 0, borderBottom: i < txns.length - 1 ? `1px dashed ${CC.border}` : 'none' }}>
+                          <div style={{ fontSize: 15 }}>{t.ic}</div>
+                          <div style={{ flex: 1, fontSize: 13, color: CC.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.label}</div>
+                          <div style={{ fontSize: 13, fontWeight: 700, fontFamily: DISPLAY, color: CC.ember, fontVariantNumeric: 'tabular-nums' }}>฿{Math.abs(t.amt).toLocaleString('th-TH')}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Footer brand */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, opacity: 0.8 }}>
+                    <Acorn size={14} />
+                    <span style={{ fontSize: 11, fontWeight: 700, color: CC.walnut, letterSpacing: 0.5 }}>Acorn Finance</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action buttons (not captured) */}
+              <div style={{ display: 'flex', gap: 10, width: 340, marginTop: 16 }}>
+                <button onClick={handleSaveCard} disabled={shareBusy}
+                  style={{ flex: 1, padding: 14, borderRadius: 16, border: `1px solid ${CC.border}`, background: CC.surface, color: CC.ink, fontSize: 14, fontWeight: 700, fontFamily: FONT, cursor: shareBusy ? 'default' : 'pointer' }}>
+                  {shareBusy ? '⏳ กำลังสร้าง...' : '⬇️ บันทึกรูป'}
+                </button>
+                <button onClick={handleShareCard} disabled={shareBusy}
+                  style={{ flex: 1, padding: 14, borderRadius: 16, border: 'none', background: CC.moss, color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: FONT, cursor: shareBusy ? 'default' : 'pointer' }}>
+                  {shareBusy ? '⏳ กำลังสร้าง...' : '📤 แชร์'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Family setup — choice sheet */}
       {showFamilySetup && (
