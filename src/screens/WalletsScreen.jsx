@@ -414,22 +414,32 @@ export function WalletsScreen({
     const node = shareCardRef.current
     if (!node) return null
     await document.fonts?.ready
-    // render twice — first pass warms up font/SVG, second pass is reliable
-    await toPng(node, { pixelRatio: 2, cacheBust: true })
-    const dataUrl = await toPng(node, { pixelRatio: 2, cacheBust: true })
+    const w = node.scrollWidth, h = node.scrollHeight
+    // กัน canvas เกินลิมิต iOS (~4096px ด้านยาว) เวลารายการเยอะ
+    const pr = Math.min(2, 4000 / Math.max(w, h))
+    const opts = { pixelRatio: pr, cacheBust: true, width: w, height: h }
+    // render สองรอบ — รอบแรกอุ่นฟอนต์/SVG รอบสองได้ภาพครบ
+    await toPng(node, opts)
+    const dataUrl = await toPng(node, opts)
     return await (await fetch(dataUrl)).blob()
+  }
+  const downloadBlob = (blob, filename) => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.style.display = 'none'
+    document.body.appendChild(a)   // ต้องอยู่ใน DOM บาง browser ถึงเซฟตรง ไม่เด้ง chooser
+    a.click()
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
   const handleSaveCard = async () => {
     if (shareBusy) return
     setShareBusy(true)
     try {
       const blob = await genCardBlob()
-      if (blob) {
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url; a.download = `${activeRoom?.name || 'trip'}-สรุป.png`; a.click()
-        URL.revokeObjectURL(url)
-      }
+      if (blob) downloadBlob(blob, `${activeRoom?.name || 'trip'}-สรุป.png`)
     } catch (e) { console.error('save card failed', e) }
     setShareBusy(false)
   }
@@ -443,10 +453,7 @@ export function WalletsScreen({
         if (navigator.canShare?.({ files: [file] })) {
           await navigator.share({ files: [file], title: activeRoom?.name || 'สรุปทริป' })
         } else {
-          const url = URL.createObjectURL(blob)
-          const a = document.createElement('a')
-          a.href = url; a.download = `${activeRoom?.name || 'trip'}-สรุป.png`; a.click()
-          URL.revokeObjectURL(url)
+          downloadBlob(blob, `${activeRoom?.name || 'trip'}-สรุป.png`)
         }
       }
     } catch (e) { if (e.name !== 'AbortError') console.error('share card failed', e) }
@@ -1619,7 +1626,7 @@ export function WalletsScreen({
 
               {/* ── Captured card scene ── */}
               <div ref={shareCardRef} style={{
-                width: 340, position: 'relative', overflow: 'hidden', borderRadius: 26,
+                width: 340, flexShrink: 0, position: 'relative', overflow: 'hidden', borderRadius: 26,
                 background: 'linear-gradient(165deg, #FBE6CB 0%, #F3DDB4 48%, #EBD0A6 100%)',
                 padding: '30px 22px 22px', fontFamily: FONT, boxSizing: 'border-box',
               }}>
